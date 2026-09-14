@@ -465,19 +465,22 @@
       const currentStop = stopsData[currentIndex];
       currentStop.status = status;
 
-      // Função auxiliar para limpar e padronizar o nome da rua (remove números, vírgulas e espaços extras)
       function extractStreetName(fullAddress) {
         if (!fullAddress) return '';
-        let clean = fullAddress.split(',')[0].replace(/[0-9]/g, '').trim().toLowerCase();
+        let clean = fullAddress.split(',')[0]
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[0-9]/g, '')
+          .trim()
+          .toLowerCase();
         return clean;
       }
 
       const currentStreet = extractStreetName(currentStop.address);
 
-      // 1. Tenta achar uma parada pendente na mesma rua, priorizando a mais próxima geograficamente
+      // Trava rigorosa: varre toda a lista e busca qualquer parada pendente na mesma rua
       let sameStreetPending = stopsData
         .map((s, idx) => ({ stop: s, index: idx }))
-        .filter(item => item.index > currentIndex && item.stop.status === 'pending' && extractStreetName(item.stop.address) === currentStreet);
+        .filter(item => item.stop.status === 'pending' && extractStreetName(item.stop.address) === currentStreet);
 
       let nextIndex = -1;
 
@@ -489,10 +492,9 @@
         });
         nextIndex = sameStreetPending[0].index;
       } else {
-        // 2. Se acabou a rua atual, busca a próxima parada pendente mais próxima no geral
         let allPending = stopsData
           .map((s, idx) => ({ stop: s, index: idx }))
-          .filter(item => item.index > currentIndex && item.stop.status === 'pending');
+          .filter(item => item.stop.status === 'pending');
 
         if (allPending.length > 0) {
           allPending.sort((a, b) => {
@@ -502,8 +504,7 @@
           });
           nextIndex = allPending[0].index;
         } else {
-          let fallback = stopsData.findIndex(s => s.status === 'pending');
-          nextIndex = fallback;
+          nextIndex = stopsData.findIndex(s => s.status === 'pending');
         }
       }
 
@@ -512,7 +513,6 @@
       
       const activeStop = stopsData[currentIndex];
       if (activeStop && !isNaN(activeStop.lat)) {
-        // Zoom alterado de 18 para 15 para ficar mais longe ao avançar
         map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 15 });
       }
     }
