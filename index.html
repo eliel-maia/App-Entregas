@@ -385,11 +385,11 @@
 
     function centerOnUserGPS() {
       if (userLocation) {
-        map.flyTo({ center: userLocation, zoom: 17 });
+        map.flyTo({ center: userLocation, zoom: 15 });
       } else {
         navigator.geolocation.getCurrentPosition((position) => {
           userLocation = [position.coords.longitude, position.coords.latitude];
-          map.flyTo({ center: userLocation, zoom: 17 });
+          map.flyTo({ center: userLocation, zoom: 15 });
         }, () => {
           alert("Não foi possível obter sua localização atual. Verifique se o GPS está ativado.");
         }, { enableHighAccuracy: true });
@@ -438,7 +438,7 @@
       });
 
       if (fitMapBounds && stopsData.length > 0) {
-        map.fitBounds(bounds, { padding: 50, maxZoom: 17 });
+        map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
       }
 
       updateUI();
@@ -449,7 +449,7 @@
       currentIndex = index;
       const stop = stopsData[currentIndex];
       if (stop && !isNaN(stop.lat)) {
-        map.flyTo({ center: [stop.lng, stop.lat], zoom: 18 });
+        map.flyTo({ center: [stop.lng, stop.lat], zoom: 15 });
       }
       renderStops(false);
     }
@@ -462,14 +462,26 @@
 
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
-      stopsData[currentIndex].status = status;
-      let nextIndex = stopsData.findIndex((s, idx) => idx > currentIndex && s.status === 'pending');
-      if (nextIndex === -1) nextIndex = stopsData.findIndex(s => s.status === 'pending');
+      const currentStop = stopsData[currentIndex];
+      currentStop.status = status;
+
+      // Mantém na mesma rua se ainda houver paradas pendentes com o mesmo endereço/rua
+      let nextIndex = stopsData.findIndex((s, idx) => idx > currentIndex && s.status === 'pending' && s.address === currentStop.address);
+      
+      // Se não houver mais na mesma rua, busca a próxima parada pendente geral
+      if (nextIndex === -1) {
+        nextIndex = stopsData.findIndex((s, idx) => idx > currentIndex && s.status === 'pending');
+      }
+      if (nextIndex === -1) {
+        nextIndex = stopsData.findIndex(s => s.status === 'pending');
+      }
+
       if (nextIndex !== -1) currentIndex = nextIndex;
       renderStops(false);
+      
       const activeStop = stopsData[currentIndex];
       if (activeStop && !isNaN(activeStop.lat)) {
-        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 18 });
+        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 15 });
       }
     }
 
