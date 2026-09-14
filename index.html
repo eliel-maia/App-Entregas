@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>App de Entregas SPX - Stadia Alidade Smooth</title>
   
-  <!-- Configurações para PWA / Instalação com caminho relativo -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,12 +21,10 @@
     #app-container { position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column; }
     #map { width: 100%; height: 100%; z-index: 1; background: #e5e3df; }
 
-    /* MENU HAMBÚRGUER À ESQUERDA */
     .menu-bar-left {
-      position: absolute; top: 12px; left: 12px; z-index: 1000;
+      position: absolute; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px;
     }
 
-    /* CARD DE ESTATÍSTICAS À DIREITA */
     .top-bar-right {
       position: absolute; top: 12px; right: 12px; z-index: 1000;
       display: flex; align-items: center; justify-content: flex-end;
@@ -38,6 +35,12 @@
       border-radius: 50%; display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: none; font-size: 15px; color: #333; cursor: pointer;
       flex-shrink: 0;
+    }
+
+    .btn-install-badge {
+      background: #5046e5; color: white; border-radius: 19px; padding: 0 14px; height: 38px;
+      display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800;
+      box-shadow: 0 4px 14px rgba(80,70,229,0.3); border: none; cursor: pointer; text-transform: uppercase;
     }
 
     .stats-card {
@@ -51,10 +54,8 @@
     .stat-item { display: flex; flex-direction: column; align-items: center; }
     .stat-label { font-size: 8px; font-weight: 700; color: #9ca3af; letter-spacing: 0.5px; text-transform: uppercase; }
     .stat-value { font-size: 11px; font-weight: 800; color: #1f2937; margin-top: 1px; }
-    
     .stat-divider { width: 1px; height: 18px; background-color: rgba(229, 231, 235, 0.8); }
 
-    /* BOTTOM SHEET */
     .bottom-sheet {
       position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: white;
       border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 12px 16px 18px 16px;
@@ -62,93 +63,44 @@
     }
 
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 8px auto; }
-    
     .tags-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     
     .tag-purple-light { 
-      background: #f0f0ff; 
-      color: #5046e5; 
-      padding: 4px 10px; 
-      border-radius: 12px; 
-      font-size: 10px; 
-      font-weight: 800; 
-      text-transform: uppercase; 
-      display: inline-flex;
-      align-items: center;
+      background: #f0f0ff; color: #5046e5; padding: 4px 10px; border-radius: 12px; 
+      font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
     }
 
     .tag-packages-btn {
-      background: #fff3eb; 
-      color: #ff5500;    
-      border: 1px solid #ffdecb; 
-      padding: 4px 10px; 
-      border-radius: 12px; 
-      font-size: 10px; 
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      text-transform: uppercase;
-      transition: all 0.2s;
-    }
-
-    .tag-packages-btn i.fa-box {
-      color: #ff5500;
-      font-size: 11px;
-    }
-
-    .tag-packages-btn .chevron-icon {
-      font-size: 9px;
-      color: #ff5500;
-      margin-left: 2px;
-    }
-
-    .tag-packages-btn:active {
-      transform: scale(0.96);
+      background: #fff3eb; color: #ff5500; border: 1px solid #ffdecb; padding: 4px 10px; 
+      border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; display: inline-flex;
+      align-items: center; gap: 4px; text-transform: uppercase;
     }
 
     .tag-step { font-size: 11px; font-weight: 800; color: #5046e5; display: flex; align-items: center; gap: 4px; }
 
     .address-title { 
-      font-size: 13px; 
-      font-weight: 700; 
-      color: #111827; 
-      margin-bottom: 1px; 
-      text-transform: uppercase; 
-      line-height: 1.2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 1px; 
+      text-transform: uppercase; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .address-subtitle { 
-      font-size: 11px; 
-      color: #6b7280; 
-      margin-bottom: 10px; 
-      line-height: 1.2;
-    }
+    .address-subtitle { font-size: 11px; color: #6b7280; margin-bottom: 10px; line-height: 1.2; }
 
     .actions-row { display: flex; gap: 8px; margin-top: 4px; }
-
     .btn-waze-blue {
       flex: 1; height: 44px; background: #5046e5; color: white; border: none;
       border-radius: 22px; font-weight: 700; font-size: 12px; display: flex;
       flex-direction: column; align-items: center; justify-content: center; cursor: pointer; text-decoration: none;
     }
-
     .btn-start-route {
       flex: 2; height: 44px; background: #5046e5; color: white; border: none;
       border-radius: 22px; font-weight: 700; font-size: 13px; display: flex;
       align-items: center; justify-content: center; gap: 6px; cursor: pointer;
       box-shadow: 0 4px 12px rgba(80, 70, 229, 0.3);
     }
-
     .btn-fail {
       flex: 1; height: 44px; background: #f3f4f6; color: #ef4444; border: none;
       border-radius: 22px; font-weight: 700; font-size: 10px; display: flex;
       flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
     }
-
     .btn-success {
       flex: 1.2; height: 44px; background: #059669; color: white; border: none;
       border-radius: 22px; font-weight: 700; font-size: 10px; display: flex;
@@ -177,91 +129,35 @@
       padding: 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0;
       margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
     }
-
     .stop-badge {
       background: #5046e5; color: white; padding: 4px 10px; border-radius: 8px;
       font-size: 12px; font-weight: 800; display: inline-block; margin-bottom: 4px;
     }
-
     .upload-btn {
       width: 100%; padding: 10px; background: #5046e5; color: white; border: none;
       border-radius: 10px; font-weight: 700; font-size: 11px; margin-bottom: 12px; cursor: pointer; text-align: center; display: block;
     }
 
-    .custom-pin-wrapper {
-      position: relative;
-      width: 42px;
-      height: 42px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-
+    .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; }
     .custom-pin {
-      position: relative;
-      width: 28px; 
-      height: 28px; 
-      border-radius: 50%;
-      background: #5046e5; 
-      color: white;
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
-      font-weight: 800; 
-      font-size: 11px; 
-      border: 2px solid white;
+      position: relative; width: 28px; height: 28px; border-radius: 50%;
+      background: #5046e5; color: white; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 11px; border: 2px solid white;
       box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-      transition: background-color 0.2s ease, color 0.2s ease, width 0.2s ease, height 0.2s ease;
     }
-
     .custom-pin::after {
-      content: '';
-      position: absolute;
-      bottom: -6px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-top: 6px solid #5046e5;
-      transition: border-top-color 0.2s ease;
+      content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #5046e5;
     }
-
     .pkg-badge {
-      position: absolute;
-      top: -4px;
-      right: -10px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #ffffff;
-      color: #ff5500;
-      font-size: 9px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      border: 1px solid #ff5500;
-      z-index: 10;
+      position: absolute; top: -4px; right: -10px; width: 16px; height: 16px; border-radius: 50%;
+      background: #ffffff; color: #ff5500; font-size: 9px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #ff5500; z-index: 10;
     }
-
-    .custom-pin.active {
-      width: 32px;
-      height: 32px;
-      font-size: 12px;
-      background: #ff5500;
-      color: #ffffff;
-      z-index: 999;
-    }
-    .custom-pin.active::after {
-      border-top-color: #ff5500;
-    }
-    
+    .custom-pin.active { width: 32px; height: 32px; font-size: 12px; background: #ff5500; color: #ffffff; z-index: 999; }
+    .custom-pin.active::after { border-top-color: #ff5500; }
     .custom-pin.done { background: #10b981; color: white; }
     .custom-pin.done::after { border-top-color: #10b981; }
-
     .custom-pin.failed { background: #ef4444; color: white; }
     .custom-pin.failed::after { border-top-color: #ef4444; }
   </style>
@@ -271,24 +167,18 @@
   <div id="app-container">
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
+      <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
+        <i class="fa-solid fa-download"></i> Instalar
+      </button>
     </div>
 
     <div class="top-bar-right">
       <div class="stats-card">
-        <div class="stat-item">
-          <span class="stat-label">RESTANTE</span>
-          <span class="stat-value" id="time-val">0m</span>
-        </div>
+        <div class="stat-item"><span class="stat-label">RESTANTE</span><span class="stat-value" id="time-val">0m</span></div>
         <div class="stat-divider"></div>
-        <div class="stat-item">
-          <span class="stat-label">ENTREGAS</span>
-          <span class="stat-value"><span id="delivered-pkgs">0</span>/<span id="total-pkgs">0</span></span>
-        </div>
+        <div class="stat-item"><span class="stat-label">ENTREGAS</span><span class="stat-value"><span id="delivered-pkgs">0</span>/<span id="total-pkgs">0</span></span></div>
         <div class="stat-divider"></div>
-        <div class="stat-item">
-          <span class="stat-label">DIST.</span>
-          <span class="stat-value"><span id="total-dist">0.0</span> km</span>
-        </div>
+        <div class="stat-item"><span class="stat-label">DIST.</span><span class="stat-value"><span id="total-dist">0.0</span> km</span></div>
       </div>
     </div>
 
@@ -296,21 +186,15 @@
 
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
-      
       <div class="tags-row">
         <span class="tag-step" id="tag-step" style="display: none;">• <span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
         <span class="tag-purple-light" id="tag-stop">PARADA --</span>
-        
         <button class="tag-packages-btn" onclick="openPackagesModal()">
-          <i class="fa-solid fa-box"></i>
-          <span id="tag-packages">1 PACOTES</span>
-          <i class="fa-solid fa-chevron-right chevron-icon"></i>
+          <i class="fa-solid fa-box"></i><span id="tag-packages">1 PACOTES</span><i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px;"></i>
         </button>
       </div>
-      
       <div class="address-title" id="address-title">Selecione uma parada</div>
       <div class="address-subtitle" id="address-subtitle">Carregue sua planilha SPX para iniciar</div>
-
       <div class="actions-row" id="actions-container"></div>
     </div>
 
@@ -324,7 +208,6 @@
           <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA SPX
         </label>
         <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileUpload(event)">
-        
         <div id="stops-list"></div>
       </div>
     </div>
@@ -347,21 +230,40 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
-    // Registrar o Service Worker com caminho relativo ./sw.js
+    // Registrar o Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-          .then(() => console.log('Service Worker registrado com sucesso!'))
-          .catch(err => console.log('Erro ao registrar Service Worker:', err));
+          .then(() => console.log('Service Worker OK'))
+          .catch(err => console.log('Erro SW:', err));
       });
     }
 
-    let stopsData = [
-      { id: '1', originalStop: '3', address: 'RUA PEROBA, 514', neighborhood: 'Jardim Paineiras', city: 'Garça', packagesCount: 3, packagesList: [{ stopNumber: '3', code: 'BR2643627980371-A' }, { stopNumber: '3', code: 'BR2643627980371-B' }, { stopNumber: '3', code: 'BR2643627980371-C' }], lat: -22.217049, lng: -49.647320, status: 'pending' },
-      { id: '2', originalStop: '4', address: 'RUA PEROBA, 550', neighborhood: 'Jardim Paineiras', city: 'Garça', packagesCount: 1, packagesList: [{ stopNumber: '4', code: 'BR2643627980372' }], lat: -22.217300, lng: -49.647600, status: 'pending' },
-      { id: '3', originalStop: '5', address: 'RUA PEROBA, 600', neighborhood: 'Jardim Paineiras', city: 'Garça', packagesCount: 2, packagesList: [{ stopNumber: '5', code: 'BR2643627980373-A' }, { stopNumber: '5', code: 'BR2643627980373-B' }], lat: -22.217600, lng: -49.648000, status: 'pending' }
-    ];
+    // Capturar evento de instalação do navegador
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('btn-install').style.display = 'flex';
+    });
 
+    function triggerInstall() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('btn-install').style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      } else {
+        alert("Para instalar:\n\n• No Android (Chrome): Toque nos 3 pontos no canto superior direito e selecione 'Adicionar à tela inicial' ou 'Instalar aplicativo'.\n• No iPhone (Safari): Toque no botão de Compartilhar (quadrado com seta para cima) e escolha 'Adicionar à Tela de Início'.");
+      }
+    }
+
+    let stopsData = [
+      { id: '1', originalStop: '3', address: 'RUA PEROBA, 514', neighborhood: 'Jardim Paineiras', city: 'Garça', packagesCount: 3, packagesList: [{ stopNumber: '3', code: 'BR2643627980371-A' }, { stopNumber: '3', code: 'BR2643627980371-B' }, { stopNumber: '3', code: 'BR2643627980371-C' }], lat: -22.217049, lng: -49.647320, status: 'pending' }
+    ];
     let currentIndex = 0;
     let routeStarted = false;
     let map, markers = [];
@@ -370,19 +272,14 @@
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     function calculateTotalDistance() {
       let total = 0;
       for (let i = 0; i < stopsData.length - 1; i++) {
-        total += getDistanceHaversine(
-          stopsData[i].lat, stopsData[i].lng,
-          stopsData[i+1].lat, stopsData[i+1].lng
-        );
+        total += getDistanceHaversine(stopsData[i].lat, stopsData[i].lng, stopsData[i+1].lat, stopsData[i+1].lng);
       }
       return total.toFixed(1);
     }
@@ -390,133 +287,77 @@
     function calculateRemainingTime() {
       const pendingStopsCount = stopsData.filter(s => s.status === 'pending').length;
       const totalMinutes = pendingStopsCount * 4;
-
       if (totalMinutes === 0) return '0m';
-
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
-
-      if (hours > 0) {
-        return `${hours}h ${minutes}m`;
-      }
-      return `${minutes}m`;
+      return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
 
     function optimizeRouteSequential() {
       if (stopsData.length <= 1) return;
-
       let centerLat = stopsData.reduce((s, p) => s + p.lat, 0) / stopsData.length;
       let centerLng = stopsData.reduce((s, p) => s + p.lng, 0) / stopsData.length;
-
-      let startIdx = 0;
-      let maxDist = -1;
+      let startIdx = 0, maxDist = -1;
       stopsData.forEach((p, idx) => {
         let d = getDistanceHaversine(centerLat, centerLng, p.lat, p.lng);
-        if (d > maxDist) {
-          maxDist = d;
-          startIdx = idx;
-        }
+        if (d > maxDist) { maxDist = d; startIdx = idx; }
       });
-
       let unvisited = [...stopsData];
       let current = unvisited.splice(startIdx, 1)[0];
       let ordered = [current];
-
       while (unvisited.length > 0) {
-        let bestIdx = 0;
-        let minCost = Infinity;
-
+        let bestIdx = 0, minCost = Infinity;
         for (let i = 0; i < unvisited.length; i++) {
           let dist = getDistanceHaversine(current.lat, current.lng, unvisited[i].lat, unvisited[i].lng);
-          if (dist < minCost) {
-            minCost = dist;
-            bestIdx = i;
-          }
+          if (dist < minCost) { minCost = dist; bestIdx = i; }
         }
-
         current = unvisited.splice(bestIdx, 1)[0];
         ordered.push(current);
       }
-
       stopsData = ordered;
       currentIndex = 0;
     }
 
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([-22.217049, -49.647320], 15);
-
       L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-        maxZoom: 20,
-        attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        maxZoom: 20, attribution: '&copy; Stadia Maps'
       }).addTo(map);
-
       renderStops(true);
-
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 500);
+      setTimeout(() => { map.invalidateSize(); }, 500);
     }
 
     function renderStops(fitMapBounds = false) {
       markers.forEach(m => map.removeLayer(m));
       markers = [];
-
       const coords = [];
-
       stopsData.forEach((item, index) => {
-        if (typeof item.lat === 'number' && typeof item.lng === 'number' && !isNaN(item.lat) && !isNaN(item.lng)) {
+        if (typeof item.lat === 'number' && typeof item.lng === 'number' && !isNaN(item.lat)) {
           coords.push([item.lat, item.lng]);
-
           const isActive = index === currentIndex;
           let statusClass = '';
           if (item.status === 'delivered') statusClass = 'done';
           if (item.status === 'failed') statusClass = 'failed';
-
-          const badgeHtml = item.packagesCount > 1 
-            ? `<div class="pkg-badge">${item.packagesCount}</div>` 
-            : '';
-
-          const displayStopNum = item.originalStop || (index + 1);
-
+          const badgeHtml = item.packagesCount > 1 ? `<div class="pkg-badge">${item.packagesCount}</div>` : '';
           const customIcon = L.divIcon({
             className: 'custom-pin-container',
-            html: `
-              <div class="custom-pin-wrapper">
-                <div class="custom-pin ${isActive ? 'active' : ''} ${statusClass}">
-                  ${displayStopNum}
-                  ${badgeHtml}
-                </div>
-              </div>
-            `,
-            iconSize: [42, 42],
-            iconAnchor: [21, 35]
+            html: `<div class="custom-pin-wrapper"><div class="custom-pin ${isActive ? 'active' : ''} ${statusClass}">${item.originalStop || (index+1)}${badgeHtml}</div></div>`,
+            iconSize: [42, 42], iconAnchor: [21, 35]
           });
-
           const marker = L.marker([item.lat, item.lng], { icon: customIcon }).addTo(map);
           marker.on('click', () => selectStop(index));
           markers.push(marker);
         }
       });
-
-      if (fitMapBounds && coords.length > 0) {
-        map.fitBounds(L.polyline(coords).getBounds(), { padding: [40, 40] });
-      }
-
-      if (map) {
-        map.invalidateSize();
-      }
-
+      if (fitMapBounds && coords.length > 0) map.fitBounds(L.polyline(coords).getBounds(), { padding: [40, 40] });
+      if (map) map.invalidateSize();
       updateUI();
     }
 
     function selectStop(index) {
       currentIndex = index;
       const stop = stopsData[currentIndex];
-
-      if (stop && !isNaN(stop.lat) && !isNaN(stop.lng)) {
-        map.setView([stop.lat, stop.lng], 18, { animate: true });
-      }
-
+      if (stop && !isNaN(stop.lat)) map.setView([stop.lat, stop.lng], 18, { animate: true });
       renderStops(false);
     }
 
@@ -529,35 +370,22 @@
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       stopsData[currentIndex].status = status;
-
       let nextIndex = stopsData.findIndex((s, idx) => idx > currentIndex && s.status === 'pending');
-      if (nextIndex !== -1) {
-        currentIndex = nextIndex;
-      } else {
-        nextIndex = stopsData.findIndex(s => s.status === 'pending');
-        if (nextIndex !== -1) currentIndex = nextIndex;
-      }
-
+      if (nextIndex === -1) nextIndex = stopsData.findIndex(s => s.status === 'pending');
+      if (nextIndex !== -1) currentIndex = nextIndex;
       renderStops(false);
       const activeStop = stopsData[currentIndex];
-      if (activeStop && !isNaN(activeStop.lat) && !isNaN(activeStop.lng)) {
-        map.setView([activeStop.lat, activeStop.lng], 18, { animate: true });
-      }
+      if (activeStop && !isNaN(activeStop.lat)) map.setView([activeStop.lat, activeStop.lng], 18, { animate: true });
     }
 
     function updateUI() {
       if (stopsData.length === 0) return;
-
       const stop = stopsData[currentIndex];
-
-      let totalPkgs = 0;
-      let deliveredPkgs = 0;
-
+      let totalPkgs = 0, deliveredPkgs = 0;
       stopsData.forEach(s => {
         totalPkgs += s.packagesCount;
         if (s.status === 'delivered') deliveredPkgs += s.packagesCount;
       });
-
       document.getElementById('time-val').innerText = calculateRemainingTime();
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
@@ -574,7 +402,6 @@
 
       document.getElementById('tag-stop').innerText = `PARADA ${stop.originalStop}`;
       document.getElementById('tag-packages').innerText = `${stop.packagesCount} PACOTE(S)`;
-      
       document.getElementById('address-title').innerText = stop.address;
       document.getElementById('address-subtitle').innerText = `${stop.neighborhood}, ${stop.city}`;
 
@@ -583,30 +410,16 @@
 
       if (!routeStarted) {
         actionsContainer.innerHTML = `
-          <a href="${wazeUrl}" target="_blank" class="btn-waze-blue" style="background:#5046e5; color:#fff;">
-            <i class="fa-solid fa-location-arrow"></i> WAZE
-          </a>
-          <button class="btn-start-route" onclick="startRoute()">
-            <i class="fa-solid fa-play"></i> INICIAR ROTA
-          </button>
+          <a href="${wazeUrl}" target="_blank" class="btn-waze-blue"><i class="fa-solid fa-location-arrow"></i> WAZE</a>
+          <button class="btn-start-route" onclick="startRoute()"><i class="fa-solid fa-play"></i> INICIAR ROTA</button>
         `;
       } else {
         actionsContainer.innerHTML = `
-          <a href="${wazeUrl}" target="_blank" class="btn-waze-blue">
-            <i class="fa-solid fa-location-arrow" style="font-size:14px;"></i>
-            <span>WAZE</span>
-          </a>
-          <button class="btn-fail" onclick="setDeliveryStatus('failed')">
-            <i class="fa-solid fa-box-archive" style="font-size:14px;"></i>
-            <span>FALHA</span>
-          </button>
-          <button class="btn-success" onclick="setDeliveryStatus('delivered')">
-            <i class="fa-solid fa-box-check" style="font-size:14px;"></i>
-            <span>ENTREGUE</span>
-          </button>
+          <a href="${wazeUrl}" target="_blank" class="btn-waze-blue"><i class="fa-solid fa-location-arrow" style="font-size:14px;"></i><span>WAZE</span></a>
+          <button class="btn-fail" onclick="setDeliveryStatus('failed')"><i class="fa-solid fa-box-archive" style="font-size:14px;"></i><span>FALHA</span></button>
+          <button class="btn-success" onclick="setDeliveryStatus('delivered')"><i class="fa-solid fa-box-check" style="font-size:14px;"></i><span>ENTREGUE</span></button>
         `;
       }
-
       renderList();
     }
 
@@ -617,68 +430,33 @@
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
-
-      document.getElementById('modal-pkg-stop-title').innerText = `Pacotes do Endereço (${stop.packagesCount})`;
+      document.getElementById('modal-pkg-stop-title').innerText = `Pacotes (${stop.packagesCount})`;
       document.getElementById('modal-pkg-address').innerText = `${stop.address} - ${stop.neighborhood}`;
-
       const listContainer = document.getElementById('packages-list');
       listContainer.innerHTML = '';
-
       stop.packagesList.forEach((pkg) => {
         const div = document.createElement('div');
         div.className = 'pkg-card';
-        div.innerHTML = `
-          <div>
-            <span class="stop-badge"><i class="fa-solid fa-location-dot"></i> PARADA ${pkg.stopNumber}</span>
-            <div style="font-size:14px; font-weight:800; color:#0f172a; margin-top:2px;">${pkg.code}</div>
-          </div>
-          <i class="fa-solid fa-barcode" style="font-size:22px; color:#5046e5;"></i>
-        `;
+        div.innerHTML = `<div><span class="stop-badge">PARADA ${pkg.stopNumber}</span><div style="font-size:14px; font-weight:800; color:#0f172a;">${pkg.code}</div></div><i class="fa-solid fa-barcode" style="font-size:22px; color:#5046e5;"></i>`;
         listContainer.appendChild(div);
       });
-
       toggleModal('pacotes-modal', true);
     }
 
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
-
-      const sortedStops = [...stopsData].sort((a, b) => {
-        const numA = parseInt(a.originalStop) || 0;
-        const numB = parseInt(b.originalStop) || 0;
-        return numA - numB;
-      });
-
+      const sortedStops = [...stopsData].sort((a, b) => (parseInt(a.originalStop) || 0) - (parseInt(b.originalStop) || 0));
       sortedStops.forEach((item) => {
         const originalIndex = stopsData.findIndex(s => s.id === item.id);
-
         const div = document.createElement('div');
         let statusIcon = '<i class="fa-regular fa-circle" style="font-size: 13px;"></i>';
         let itemClass = '';
-
-        if (item.status === 'delivered') {
-          statusIcon = '<i class="fa-solid fa-circle-check" style="color:#10b981; font-size: 13px;"></i>';
-          itemClass = 'completed';
-        } else if (item.status === 'failed') {
-          statusIcon = '<i class="fa-solid fa-circle-xmark" style="color:#ef4444; font-size: 13px;"></i>';
-          itemClass = 'failed';
-        }
-
+        if (item.status === 'delivered') { statusIcon = '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i>'; itemClass = 'completed'; }
+        else if (item.status === 'failed') { statusIcon = '<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i>'; itemClass = 'failed'; }
         div.className = `stop-item ${itemClass}`;
-        div.onclick = () => {
-          selectStop(originalIndex);
-          toggleModal('paradas-modal', false);
-        };
-
-        div.innerHTML = `
-          <div style="line-height: 1.3;">
-            <strong style="font-size: 11px; color: #1f2937;">Parada ${item.originalStop} - ${item.address}</strong>
-            <div style="font-size: 10px; color:#5046e5; font-weight:700;">${item.packagesCount} Pacote(s)</div>
-            <div style="font-size: 9px; color:#6b7280;">${item.neighborhood}</div>
-          </div>
-          <div>${statusIcon}</div>
-        `;
+        div.onclick = () => { selectStop(originalIndex); toggleModal('paradas-modal', false); };
+        div.innerHTML = `<div style="line-height:1.3;"><strong style="font-size:11px;">Parada ${item.originalStop} - ${item.address}</strong><div style="font-size:10px; color:#5046e5; font-weight:700;">${item.packagesCount} Pacote(s)</div></div><div>${statusIcon}</div>`;
         listContainer.appendChild(div);
       });
     }
@@ -686,27 +464,22 @@
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function(e) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
-
         const stopsMap = new Map();
-
         json.forEach((row, index) => {
           let lat = parseFloat(row['Latitude']);
           let lng = parseFloat(row['Longitude']);
-
           if (!isNaN(lat) && !isNaN(lng) && lat < 0 && lng < 0) {
             const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `P${index + 1}`;
             const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}`;
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
-
             if (stopsMap.has(key)) {
-              const existing = stopsMap.get(key);
+              let existing = stopsMap.get(key);
               existing.packagesCount += 1;
               existing.packagesList.push({ stopNumber: rawStop, code: spxCode });
               if (!existing.stopsList.includes(rawStop)) {
@@ -716,37 +489,22 @@
               }
             } else {
               stopsMap.set(key, {
-                id: key,
-                originalStop: rawStop,
-                stopsList: [rawStop],
-                address: row['Destination Address'] || 'Endereço não especificado',
-                neighborhood: row['Bairro'] || '',
-                city: row['City'] || '',
-                packagesCount: 1,
-                packagesList: [{ stopNumber: rawStop, code: spxCode }],
-                lat: lat,
-                lng: lng,
-                status: 'pending'
+                id: key, originalStop: rawStop, stopsList: [rawStop],
+                address: row['Destination Address'] || 'Endereço', neighborhood: row['Bairro'] || '', city: row['City'] || '',
+                packagesCount: 1, packagesList: [{ stopNumber: rawStop, code: spxCode }], lat: lat, lng: lng, status: 'pending'
               });
             }
           }
         });
-
         const newStops = Array.from(stopsMap.values());
-
         if (newStops.length > 0) {
-          stopsData = newStops;
-          routeStarted = false;
-          optimizeRouteSequential();
-          renderStops(true);
-          toggleModal('paradas-modal', false);
+          stopsData = newStops; routeStarted = false; optimizeRouteSequential(); renderStops(true); toggleModal('paradas-modal', false);
         } else {
           alert("Não foram encontradas coordenadas válidas na planilha.");
         }
       };
       reader.readAsArrayBuffer(file);
     }
-
     window.onload = initMap;
   </script>
 </body>
