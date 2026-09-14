@@ -465,15 +465,46 @@
       const currentStop = stopsData[currentIndex];
       currentStop.status = status;
 
-      // Mantém na mesma rua se ainda houver paradas pendentes com o mesmo endereço/rua
-      let nextIndex = stopsData.findIndex((s, idx) => idx > currentIndex && s.status === 'pending' && s.address === currentStop.address);
-      
-      // Se não houver mais na mesma rua, busca a próxima parada pendente geral
-      if (nextIndex === -1) {
-        nextIndex = stopsData.findIndex((s, idx) => idx > currentIndex && s.status === 'pending');
+      // Função auxiliar para limpar e padronizar o nome da rua (remove números, vírgulas e espaços extras)
+      function extractStreetName(fullAddress) {
+        if (!fullAddress) return '';
+        let clean = fullAddress.split(',')[0].replace(/[0-9]/g, '').trim().toLowerCase();
+        return clean;
       }
-      if (nextIndex === -1) {
-        nextIndex = stopsData.findIndex(s => s.status === 'pending');
+
+      const currentStreet = extractStreetName(currentStop.address);
+
+      // 1. Tenta achar uma parada pendente na mesma rua, priorizando a mais próxima geograficamente
+      let sameStreetPending = stopsData
+        .map((s, idx) => ({ stop: s, index: idx }))
+        .filter(item => item.index > currentIndex && item.stop.status === 'pending' && extractStreetName(item.stop.address) === currentStreet);
+
+      let nextIndex = -1;
+
+      if (sameStreetPending.length > 0) {
+        sameStreetPending.sort((a, b) => {
+          let distA = getDistanceHaversine(currentStop.lat, currentStop.lng, a.stop.lat, a.stop.lng);
+          let distB = getDistanceHaversine(currentStop.lat, currentStop.lng, b.stop.lat, b.stop.lng);
+          return distA - distB;
+        });
+        nextIndex = sameStreetPending[0].index;
+      } else {
+        // 2. Se acabou a rua atual, busca a próxima parada pendente mais próxima no geral
+        let allPending = stopsData
+          .map((s, idx) => ({ stop: s, index: idx }))
+          .filter(item => item.index > currentIndex && item.stop.status === 'pending');
+
+        if (allPending.length > 0) {
+          allPending.sort((a, b) => {
+            let distA = getDistanceHaversine(currentStop.lat, currentStop.lng, a.stop.lat, a.stop.lng);
+            let distB = getDistanceHaversine(currentStop.lat, currentStop.lng, b.stop.lat, b.stop.lng);
+            return distA - distB;
+          });
+          nextIndex = allPending[0].index;
+        } else {
+          let fallback = stopsData.findIndex(s => s.status === 'pending');
+          nextIndex = fallback;
+        }
       }
 
       if (nextIndex !== -1) currentIndex = nextIndex;
@@ -481,6 +512,7 @@
       
       const activeStop = stopsData[currentIndex];
       if (activeStop && !isNaN(activeStop.lat)) {
+        // Zoom alterado de 18 para 15 para ficar mais longe ao avançar
         map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 15 });
       }
     }
