@@ -86,7 +86,6 @@
 
     .tag-step { font-size: 10px; font-weight: 800; color: #5046e5; background: #f0f0ff; padding: 5px 11px; border-radius: 12px; display: inline-flex; align-items: center; text-transform: uppercase; }
 
-    /* Espaçamento maior entre os itens de cima e o endereço */
     .address-title { 
       font-size: 13px; font-weight: 700; color: #111827; margin-top: 6px; margin-bottom: 3px; 
       text-transform: uppercase; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -217,8 +216,9 @@
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row">
-        <span class="tag-step" id="tag-step" style="display: none;">ORDEM <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
+        <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
         <span class="tag-purple-light" id="tag-stop">PARADA --</span>
+        <span class="tag-purple-light" id="tag-order" style="display: none;">ORDEM <span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box"></i><span id="tag-packages">0 PACOTES</span><i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px;"></i>
         </button>
@@ -526,6 +526,7 @@
 
     function updateUI() {
       const tagStep = document.getElementById('tag-step');
+      const tagOrder = document.getElementById('tag-order');
       const actionsContainer = document.getElementById('actions-container');
 
       if (stopsData.length === 0) {
@@ -534,6 +535,7 @@
         document.getElementById('total-pkgs').innerText = '0';
         document.getElementById('total-dist').innerText = '0.0';
         tagStep.style.display = 'none';
+        tagOrder.style.display = 'none';
         document.getElementById('tag-stop').innerText = 'PARADA --';
         document.getElementById('tag-packages').innerText = '0 PACOTES';
         document.getElementById('address-title').innerText = 'Aguardando Planilha';
@@ -560,12 +562,18 @@
       document.getElementById('total-pkgs').innerText = totalPkgs;
       document.getElementById('total-dist').innerText = calculateTotalDistance();
 
+      const deliveredCount = stopsData.filter(s => s.status === 'delivered').length;
+      const totalCount = stopsData.length;
+
       if (routeStarted) {
         tagStep.style.display = 'inline-flex';
-        document.getElementById('current-step-num').innerText = currentIndex + 1;
-        document.getElementById('total-step-num').innerText = stopsData.length;
+        tagOrder.style.display = 'inline-flex';
+        document.getElementById('current-step-num').innerText = deliveredCount + 1;
+        document.getElementById('total-step-num').innerText = totalCount;
+        document.getElementById('current-order-num').innerText = currentIndex + 1;
       } else {
         tagStep.style.display = 'none';
+        tagOrder.style.display = 'none';
       }
 
       document.getElementById('tag-stop').innerText = `PARADA ${stop.originalStop}`;
