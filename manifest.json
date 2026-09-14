@@ -1,6 +1,6 @@
 {
-  "name": "App de Entregas SPX",
-  "short_name": "Entregas SPX",
+  "name": "Entregas",
+  "short_name": "Entregas",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
