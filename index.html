@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entregas</title>
+  <title>Entr</title>
   
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Entregas">
+  <meta name="apple-mobile-web-app-title" content="Entr">
 
   <!-- MapLibre GL CSS -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
@@ -117,12 +117,12 @@
     
     .modal-header { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
     .modal-header h3 { font-size: 14px; font-weight: 700; color: #1f2937; }
-    .modal-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+    .modal-body { flex: 1; overflow-y: auto; padding: 12px 16px; background: #f8fafc; }
 
     .stop-item {
-      padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; margin-bottom: 6px;
-      display: flex; justify-content: space-between; align-items: center; cursor: pointer;
-      font-size: 13px;
+      padding: 12px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0;
+      margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .stop-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
     .stop-item.failed { background: #fef2f2; border-color: #fecaca; }
@@ -133,7 +133,7 @@
     }
     .stop-badge {
       background: #5046e5; color: white; padding: 4px 10px; border-radius: 8px;
-      font-size: 12px; font-weight: 800; display: inline-block; margin-bottom: 4px;
+      font-size: 11px; font-weight: 800; display: inline-block; margin-bottom: 4px;
     }
     .upload-btn {
       width: 100%; padding: 10px; background: #5046e5; color: white; border: none;
@@ -477,7 +477,6 @@
 
       const currentStreet = extractStreetName(currentStop.address);
 
-      // Trava rigorosa: varre toda a lista e busca qualquer parada pendente na mesma rua
       let sameStreetPending = stopsData
         .map((s, idx) => ({ stop: s, index: idx }))
         .filter(item => item.stop.status === 'pending' && extractStreetName(item.stop.address) === currentStreet);
@@ -612,17 +611,45 @@
         return;
       }
 
-      const sortedStops = [...stopsData].sort((a, b) => (parseInt(a.originalStop) || 0) - (parseInt(b.originalStop) || 0));
-      sortedStops.forEach((item) => {
-        const originalIndex = stopsData.findIndex(s => s.id === item.id);
-        const div = document.createElement('div');
-        let statusIcon = '<i class="fa-regular fa-circle" style="font-size: 13px;"></i>';
+      // Mostra a lista completa detalhada com o layout de cartões (Ordem, Parada, Códigos BR e Endereço)
+      stopsData.forEach((item, originalIndex) => {
         let itemClass = '';
-        if (item.status === 'delivered') { statusIcon = '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i>'; itemClass = 'completed'; }
-        else if (item.status === 'failed') { statusIcon = '<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i>'; itemClass = 'failed'; }
+        if (item.status === 'delivered') itemClass = 'completed';
+        else if (item.status === 'failed') itemClass = 'failed';
+
+        // Monta os blocos de pacotes dentro deste endereço para exibir no cartão
+        let packagesHtml = '';
+        item.packagesList.forEach(pkg => {
+          packagesHtml += `
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <span class="stop-badge">PARADA ${pkg.stopNumber}</span>
+                <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 2px;">${pkg.code}</div>
+              </div>
+              <i class="fa-solid fa-barcode" style="font-size: 20px; color: #5046e5;"></i>
+            </div>
+          `;
+        });
+
+        const div = document.createElement('div');
         div.className = `stop-item ${itemClass}`;
+        div.style.flexDirection = 'column';
+        div.style.alignItems = 'stretch';
         div.onclick = () => { selectStop(originalIndex); toggleModal('paradas-modal', false); };
-        div.innerHTML = `<div style="line-height:1.3;"><strong style="font-size:13px;">Parada ${item.originalStop} - ${item.address}</strong><div style="font-size:11px; color:#5046e5; font-weight:700;">${item.packagesCount} Pacote(s)</div></div><div>${statusIcon}</div>`;
+        
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <div>
+              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">Ordem Seq. ${originalIndex + 1}</span>
+              <div style="font-size: 13px; font-weight: 700; color: #111827; text-transform: uppercase; margin-top: 2px;">${item.address}</div>
+              <div style="font-size: 11px; color: #6b7280;">${item.neighborhood}${item.city ? ' - ' + item.city : ''}</div>
+            </div>
+            <div>
+              ${item.status === 'delivered' ? '<i class="fa-solid fa-circle-check" style="color:#10b981; font-size:16px;"></i>' : (item.status === 'failed' ? '<i class="fa-solid fa-circle-xmark" style="color:#ef4444; font-size:16px;"></i>' : '<i class="fa-regular fa-circle" style="color:#cbd5e1; font-size:16px;"></i>')}
+            </div>
+          </div>
+          ${packagesHtml}
+        `;
         listContainer.appendChild(div);
       });
     }
