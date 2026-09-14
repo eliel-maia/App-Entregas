@@ -78,7 +78,13 @@
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
     }
 
-    /* Nova cor e espaçamento para a tag ORDEM */
+    /* Tag PARADA modificada para cor laranja (igual ao balão) */
+    .tag-stop-orange {
+      background: #fff3eb; color: #ff5500; border: 1px solid #ffdecb; padding: 5px 11px;
+      border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
+    }
+
+    /* Tag ORDEM com espaçamento corrigido e cor azul clara */
     .tag-order-style {
       background: #e0f2fe; color: #0369a1; padding: 5px 11px; border-radius: 12px;
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
@@ -221,8 +227,9 @@
       <div class="sheet-handle"></div>
       <div class="tags-row">
         <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <span class="tag-purple-light" id="tag-stop">PARADA --</span>
-        <!-- Adicionado espaço entre ORDEM e o número -->
+        <!-- Tag PARADA alterada para cor laranja -->
+        <span class="tag-stop-orange" id="tag-stop">PARADA --</span>
+        <!-- Tag ORDEM com espaço entre o texto e o número -->
         <span class="tag-order-style" id="tag-order" style="display: none;">ORDEM <span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box"></i><span id="tag-packages">0 PACOTES</span><i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px;"></i>
