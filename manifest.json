@@ -2,8 +2,16 @@
   "name": "App de Entregas SPX",
   "short_name": "Entregas SPX",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#5046e5",
-  "icons": []
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3067/3067402.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
