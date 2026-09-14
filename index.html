@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App de Entregas SPX - Stadia Alidade Smooth</title>
+  <title>App de Entregas SPX - MapLibre GL</title>
   
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
@@ -11,7 +11,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Entregas SPX">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- MapLibre GL CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
   <style>
@@ -138,7 +139,7 @@
       border-radius: 10px; font-weight: 700; font-size: 11px; margin-bottom: 12px; cursor: pointer; text-align: center; display: block;
     }
 
-    .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; }
+    .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; cursor: pointer; }
     .custom-pin {
       position: relative; width: 28px; height: 28px; border-radius: 50%;
       background: #5046e5; color: white; display: flex; align-items: center; justify-content: center;
@@ -161,29 +162,18 @@
     .custom-pin.failed { background: #ef4444; color: white; }
     .custom-pin.failed::after { border-top-color: #ef4444; }
 
-    /* ESTILO DO MARCADOR DE GPS (BASEADO NA SUA IMAGEM: CENTRO BRANCO/VERMELHO COM ANEL EXTERNO) */
     .gps-pin-container {
-      background: transparent;
-      border: none;
+      background: transparent; border: none; cursor: pointer;
     }
     .gps-marker-ring {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(225, 29, 72, 0.2);
-      border: 2px solid #e11d48;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(225, 29, 72, 0.2); border: 2px solid #e11d48;
+      display: flex; align-items: center; justify-content: center;
       box-shadow: 0 0 10px rgba(225, 29, 72, 0.5);
       animation: pulse-ring 2s infinite;
     }
     .gps-marker-inner {
-      width: 12px;
-      height: 12px;
-      background: #ffffff;
-      border: 3px solid #e11d48;
-      border-radius: 50%;
+      width: 12px; height: 12px; background: #ffffff; border: 3px solid #e11d48; border-radius: 50%;
     }
     @keyframes pulse-ring {
       0% { transform: scale(0.95); opacity: 0.8; }
@@ -238,7 +228,7 @@
         <label for="excel-upload" class="upload-btn">
           <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA SPX
         </label>
-        <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileUpload(event)">
+        <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onclick="this.value=null;" onchange="handleFileUpload(event)">
         <div id="stops-list"></div>
       </div>
     </div>
@@ -257,7 +247,8 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- MapLibre GL JS -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
@@ -293,7 +284,8 @@
     let stopsData = [];
     let currentIndex = 0;
     let routeStarted = false;
-    let map, markers = [];
+    let map;
+    let markers = [];
     let userMarker = null;
     let userLocation = null;
 
@@ -349,15 +341,18 @@
     }
 
     function initMap() {
-      map = L.map('map', { zoomControl: false }).setView([-22.222, -49.653], 14);
-      L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-        maxZoom: 20, attribution: '&copy; Stadia Maps'
-      }).addTo(map);
+      // Inicialização do MapLibre GL com o estilo Alidade Smooth da Stadia Maps
+      map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://tiles.stadiamaps.com/styles/alidade_smooth.json',
+        center: [-49.653, -22.222],
+        zoom: 14
+      });
 
-      renderStops(false);
-      startLiveTracking();
-
-      setTimeout(() => { map.invalidateSize(); }, 500);
+      map.on('load', () => {
+        renderStops(false);
+        startLiveTracking();
+      });
     }
 
     function startLiveTracking() {
@@ -365,19 +360,18 @@
         navigator.geolocation.watchPosition((position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          userLocation = [lat, lng];
+          userLocation = [lng, lat]; // MapLibre usa [longitude, latitude]
 
-          const gpsIcon = L.divIcon({
-            className: 'gps-pin-container',
-            html: '<div class="gps-marker-ring"><div class="gps-marker-inner"></div></div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
-          });
+          const el = document.createElement('div');
+          el.className = 'gps-pin-container';
+          el.innerHTML = '<div class="gps-marker-ring"><div class="gps-marker-inner"></div></div>';
 
           if (userMarker) {
-            userMarker.setLatLng(userLocation);
+            userMarker.setLngLat(userLocation);
           } else {
-            userMarker = L.marker(userLocation, { icon: gpsIcon, zIndexOffset: 2000 }).addTo(map);
+            userMarker = new maplibregl.Marker({ element: el })
+              .setLngLat(userLocation)
+              .addTo(map);
           }
         }, (error) => {
           console.log("Erro no GPS: ", error.message);
@@ -391,11 +385,11 @@
 
     function centerOnUserGPS() {
       if (userLocation) {
-        map.setView(userLocation, 17, { animate: true });
+        map.flyTo({ center: userLocation, zoom: 17 });
       } else {
         navigator.geolocation.getCurrentPosition((position) => {
-          userLocation = [position.coords.latitude, position.coords.longitude];
-          map.setView(userLocation, 17, { animate: true });
+          userLocation = [position.coords.longitude, position.coords.latitude];
+          map.flyTo({ center: userLocation, zoom: 17 });
         }, () => {
           alert("Não foi possível obter sua localização atual. Verifique se o GPS está ativado.");
         }, { enableHighAccuracy: true });
@@ -403,31 +397,51 @@
     }
 
     function renderStops(fitMapBounds = false) {
-      markers.forEach(m => map.removeLayer(m));
+      // Remove marcadores antigos do MapLibre
+      markers.forEach(m => m.remove());
       markers = [];
-      const coords = [];
+
+      const bounds = new maplibregl.LngLatBounds();
 
       stopsData.forEach((item, index) => {
         if (typeof item.lat === 'number' && typeof item.lng === 'number' && !isNaN(item.lat)) {
-          coords.push([item.lat, item.lng]);
+          const lngLat = [item.lng, item.lat];
+          bounds.extend(lngLat);
+
           const isActive = index === currentIndex;
           let statusClass = '';
           if (item.status === 'delivered') statusClass = 'done';
           if (item.status === 'failed') statusClass = 'failed';
+          
           const badgeHtml = item.packagesCount > 1 ? `<div class="pkg-badge">${item.packagesCount}</div>` : '';
-          const customIcon = L.divIcon({
-            className: 'custom-pin-container',
-            html: `<div class="custom-pin-wrapper"><div class="custom-pin ${isActive ? 'active' : ''} ${statusClass}">${item.originalStop || (index+1)}${badgeHtml}</div></div>`,
-            iconSize: [42, 42], iconAnchor: [21, 35]
+          
+          const el = document.createElement('div');
+          el.className = 'custom-pin-container';
+          el.innerHTML = `
+            <div class="custom-pin-wrapper">
+              <div class="custom-pin ${isActive ? 'active' : ''} ${statusClass}">
+                ${item.originalStop || (index+1)}
+                ${badgeHtml}
+              </div>
+            </div>
+          `;
+
+          el.addEventListener('click', () => {
+            selectStop(index);
           });
-          const marker = L.marker([item.lat, item.lng], { icon: customIcon }).addTo(map);
-          marker.on('click', () => selectStop(index));
+
+          const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+            .setLngLat(lngLat)
+            .addTo(map);
+
           markers.push(marker);
         }
       });
 
-      if (fitMapBounds && coords.length > 0) map.fitBounds(L.polyline(coords).getBounds(), { padding: [40, 40] });
-      if (map) map.invalidateSize();
+      if (fitMapBounds && stopsData.length > 0) {
+        map.fitBounds(bounds, { padding: 50, maxZoom: 17 });
+      }
+
       updateUI();
     }
 
@@ -435,7 +449,9 @@
       if (stopsData.length === 0) return;
       currentIndex = index;
       const stop = stopsData[currentIndex];
-      if (stop && !isNaN(stop.lat)) map.setView([stop.lat, stop.lng], 18, { animate: true });
+      if (stop && !isNaN(stop.lat)) {
+        map.flyTo({ center: [stop.lng, stop.lat], zoom: 18 });
+      }
       renderStops(false);
     }
 
@@ -453,7 +469,9 @@
       if (nextIndex !== -1) currentIndex = nextIndex;
       renderStops(false);
       const activeStop = stopsData[currentIndex];
-      if (activeStop && !isNaN(activeStop.lat)) map.setView([activeStop.lat, activeStop.lng], 18, { animate: true });
+      if (activeStop && !isNaN(activeStop.lat)) {
+        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 18 });
+      }
     }
 
     function updateUI() {
@@ -610,6 +628,7 @@
       };
       reader.readAsArrayBuffer(file);
     }
+
     window.onload = initMap;
   </script>
 </body>
