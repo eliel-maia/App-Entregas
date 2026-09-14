@@ -22,7 +22,7 @@
     #map { width: 100%; height: 100%; z-index: 1; background: #e5e3df; }
 
     .menu-bar-left {
-      position: absolute; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px;
+      position: absolute; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px; flex-direction: column;
     }
 
     .top-bar-right {
@@ -160,6 +160,36 @@
     .custom-pin.done::after { border-top-color: #10b981; }
     .custom-pin.failed { background: #ef4444; color: white; }
     .custom-pin.failed::after { border-top-color: #ef4444; }
+
+    /* ESTILO DO MARCADOR DE GPS (BASEADO NA SUA IMAGEM: CENTRO BRANCO/VERMELHO COM ANEL EXTERNO) */
+    .gps-pin-container {
+      background: transparent;
+      border: none;
+    }
+    .gps-marker-ring {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(225, 29, 72, 0.2);
+      border: 2px solid #e11d48;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(225, 29, 72, 0.5);
+      animation: pulse-ring 2s infinite;
+    }
+    .gps-marker-inner {
+      width: 12px;
+      height: 12px;
+      background: #ffffff;
+      border: 3px solid #e11d48;
+      border-radius: 50%;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
   </style>
 </head>
 <body>
@@ -167,6 +197,7 @@
   <div id="app-container">
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
+      <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
         <i class="fa-solid fa-download"></i> Instalar
       </button>
@@ -259,11 +290,12 @@
       }
     }
 
-    // Lista vazia para iniciar limpo
     let stopsData = [];
     let currentIndex = 0;
     let routeStarted = false;
     let map, markers = [];
+    let userMarker = null;
+    let userLocation = null;
 
     function getDistanceHaversine(lat1, lon1, lat2, lon2) {
       const R = 6371;
@@ -317,14 +349,57 @@
     }
 
     function initMap() {
-      // Centralizado inicialmente em Garça - SP
       map = L.map('map', { zoomControl: false }).setView([-22.222, -49.653], 14);
       L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
         maxZoom: 20, attribution: '&copy; Stadia Maps'
       }).addTo(map);
 
       renderStops(false);
+      startLiveTracking();
+
       setTimeout(() => { map.invalidateSize(); }, 500);
+    }
+
+    function startLiveTracking() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.watchPosition((position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          userLocation = [lat, lng];
+
+          const gpsIcon = L.divIcon({
+            className: 'gps-pin-container',
+            html: '<div class="gps-marker-ring"><div class="gps-marker-inner"></div></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+
+          if (userMarker) {
+            userMarker.setLatLng(userLocation);
+          } else {
+            userMarker = L.marker(userLocation, { icon: gpsIcon, zIndexOffset: 2000 }).addTo(map);
+          }
+        }, (error) => {
+          console.log("Erro no GPS: ", error.message);
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
+        });
+      }
+    }
+
+    function centerOnUserGPS() {
+      if (userLocation) {
+        map.setView(userLocation, 17, { animate: true });
+      } else {
+        navigator.geolocation.getCurrentPosition((position) => {
+          userLocation = [position.coords.latitude, position.coords.longitude];
+          map.setView(userLocation, 17, { animate: true });
+        }, () => {
+          alert("Não foi possível obter sua localização atual. Verifique se o GPS está ativado.");
+        }, { enableHighAccuracy: true });
+      }
     }
 
     function renderStops(fitMapBounds = false) {
