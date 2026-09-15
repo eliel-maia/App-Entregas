@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entregas</title>
+  <title>Entr</title>
   
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Entregas">
+  <meta name="apple-mobile-web-app-title" content="Entr">
 
   <!-- MapLibre GL CSS -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
@@ -28,7 +28,7 @@
 
     .top-bar-right {
       position: absolute; top: 12px; right: 12px; z-index: 1000;
-      display: flex; align-items: center; justify-content: flex-end;
+      display: flex; align-items: flex-start; justify-content: flex-end;
     }
 
     .btn-icon-menu {
@@ -54,7 +54,7 @@
     .stats-card {
       background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
       border-radius: 16px; padding: 6px 10px;
-      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 8px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.08);
       flex-shrink: 0;
     }
@@ -63,6 +63,15 @@
     .stat-label { font-size: 8px; font-weight: 700; color: #9ca3af; letter-spacing: 0.5px; text-transform: uppercase; }
     .stat-value { font-size: 11px; font-weight: 800; color: #1f2937; margin-top: 1px; }
     .stat-divider { width: 1px; height: 18px; background-color: rgba(229, 231, 235, 0.8); }
+
+    /* Estilo para a lista vertical no lugar do antigo DIST */
+    .stop-numbers-vertical {
+      display: flex; flex-direction: column; align-items: center; max-height: 70px; overflow-y: auto; width: 45px;
+    }
+    .mini-stop-badge {
+      background: #f0f0ff; color: #5046e5; font-size: 9px; font-weight: 800; padding: 1px 4px;
+      border-radius: 4px; margin-bottom: 2px; text-align: center; width: 100%;
+    }
 
     .bottom-sheet {
       position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: white;
@@ -205,7 +214,11 @@
         <div class="stat-divider"></div>
         <div class="stat-item"><span class="stat-label">ENTREGAS</span><span class="stat-value"><span id="delivered-pkgs">0</span>/<span id="total-pkgs">0</span></span></div>
         <div class="stat-divider"></div>
-        <div class="stat-item"><span class="stat-label">DIST.</span><span class="stat-value"><span id="total-dist">0.0</span> km</span></div>
+        <!-- Bloco alterado para mostrar o número da parada ou a lista vertical de pacotes da parada selecionada -->
+        <div class="stat-item" id="top-right-slot" style="min-width: 35px;">
+          <span class="stat-label">PARADA</span>
+          <span class="stat-value" id="top-right-val">--</span>
+        </div>
       </div>
     </div>
 
@@ -215,9 +228,7 @@
       <div class="sheet-handle"></div>
       <div class="tags-row">
         <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <!-- Tag PARADA com cor roxa original (.tag-purple-light) -->
         <span class="tag-purple-light" id="tag-stop">PARADA --</span>
-        <!-- Tag ORDEM com cor roxa original e espaço garantido entre o texto e o número -->
         <span class="tag-purple-light" id="tag-order" style="display: none;">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box"></i><span id="tag-packages">0 PACOTES</span><i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px;"></i>
@@ -298,23 +309,6 @@
     let userMarker = null;
     let userLocation = null;
 
-    function getDistanceHaversine(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    function calculateTotalDistance() {
-      if (stopsData.length <= 1) return '0.0';
-      let total = 0;
-      for (let i = 0; i < stopsData.length - 1; i++) {
-        total += getDistanceHaversine(stopsData[i].lat, stopsData[i].lng, stopsData[i+1].lat, stopsData[i+1].lng);
-      }
-      return total.toFixed(1);
-    }
-
     function calculateRemainingTime() {
       const pendingStopsCount = stopsData.filter(s => s.status === 'pending').length;
       const totalMinutes = pendingStopsCount * 4;
@@ -330,7 +324,7 @@
       let centerLng = stopsData.reduce((s, p) => s + p.lng, 0) / stopsData.length;
       let startIdx = 0, maxDist = -1;
       stopsData.forEach((p, idx) => {
-        let d = getDistanceHaversine(centerLat, centerLng, p.lat, p.lng);
+        let d = Math.hypot(p.lat - centerLat, p.lng - centerLng);
         if (d > maxDist) { maxDist = d; startIdx = idx; }
       });
       let unvisited = [...stopsData];
@@ -339,7 +333,7 @@
       while (unvisited.length > 0) {
         let bestIdx = 0, minCost = Infinity;
         for (let i = 0; i < unvisited.length; i++) {
-          let dist = getDistanceHaversine(current.lat, current.lng, unvisited[i].lat, unvisited[i].lng);
+          let dist = Math.hypot(current.lat - unvisited[i].lat, current.lng - unvisited[i].lng);
           if (dist < minCost) { minCost = dist; bestIdx = i; }
         }
         current = unvisited.splice(bestIdx, 1)[0];
@@ -493,8 +487,8 @@
 
       if (sameStreetPending.length > 0) {
         sameStreetPending.sort((a, b) => {
-          let distA = getDistanceHaversine(currentStop.lat, currentStop.lng, a.stop.lat, a.stop.lng);
-          let distB = getDistanceHaversine(currentStop.lat, currentStop.lng, b.stop.lat, b.stop.lng);
+          let distA = Math.hypot(currentStop.lat - a.stop.lat, currentStop.lng - a.stop.lng);
+          let distB = Math.hypot(currentStop.lat - b.stop.lat, currentStop.lng - b.stop.lng);
           return distA - distB;
         });
         nextIndex = sameStreetPending[0].index;
@@ -505,8 +499,8 @@
 
         if (allPending.length > 0) {
           allPending.sort((a, b) => {
-            let distA = getDistanceHaversine(currentStop.lat, currentStop.lng, a.stop.lat, a.stop.lng);
-            let distB = getDistanceHaversine(currentStop.lat, currentStop.lng, b.stop.lat, b.stop.lng);
+            let distA = Math.hypot(currentStop.lat - a.stop.lat, currentStop.lng - a.stop.lng);
+            let distB = Math.hypot(currentStop.lat - b.stop.lat, currentStop.lng - b.stop.lng);
             return distA - distB;
           });
           nextIndex = allPending[0].index;
@@ -533,7 +527,7 @@
         document.getElementById('time-val').innerText = '0m';
         document.getElementById('delivered-pkgs').innerText = '0';
         document.getElementById('total-pkgs').innerText = '0';
-        document.getElementById('total-dist').innerText = '0.0';
+        document.getElementById('top-right-slot').innerHTML = '<span class="stat-label">PARADA</span><span class="stat-value">--</span>';
         tagStep.style.display = 'none';
         tagOrder.style.display = 'none';
         document.getElementById('tag-stop').innerText = 'PARADA --';
@@ -560,7 +554,22 @@
       document.getElementById('time-val').innerText = calculateRemainingTime();
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
-      document.getElementById('total-dist').innerText = calculateTotalDistance();
+
+      // Lógica do Canto Superior Direito: se houver mais de 1 pacote na parada, mostra lista vertical de stops. Se não, mostra o número único da parada.
+      const topRightSlot = document.getElementById('top-right-slot');
+      if (stop.packagesList && stop.packagesList.length > 1) {
+        let verticalHtml = '<span class="stat-label">PARADAS</span><div class="stop-numbers-vertical">';
+        stop.packagesList.forEach(pkg => {
+          verticalHtml += `<span class="mini-stop-badge">${pkg.stopNumber}</span>`;
+        });
+        verticalHtml += '</div>';
+        topRightSlot.innerHTML = verticalHtml;
+      } else {
+        topRightSlot.innerHTML = `
+          <span class="stat-label">PARADA</span>
+          <span class="stat-value">${stop.originalStop}</span>
+        `;
+      }
 
       const deliveredCount = stopsData.filter(s => s.status === 'delivered').length;
       const totalCount = stopsData.length;
