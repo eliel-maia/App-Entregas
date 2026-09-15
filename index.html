@@ -103,7 +103,7 @@
       flex-direction: column; align-items: center; justify-content: center; cursor: pointer; text-decoration: none;
     }
     .btn-start-route {
-      flex: 2; height: 44px; background: #5046e5; color: white; border: none;
+      flex: 1; height: 44px; background: #5046e5; color: white; border: none;
       border-radius: 22px; font-weight: 700; font-size: 13px; display: flex;
       align-items: center; justify-content: center; gap: 6px; cursor: pointer;
       box-shadow: 0 4px 12px rgba(80, 70, 229, 0.3);
@@ -174,9 +174,7 @@
     .custom-pin.failed { background: #ef4444; color: white; }
     .custom-pin.failed::after { border-top-color: #ef4444; }
 
-    .gps-pin-container {
-      background: transparent; border: none; cursor: pointer;
-    }
+    .gps-pin-container { background: transparent; border: none; cursor: pointer; }
     .gps-marker-ring {
       width: 32px; height: 32px; border-radius: 50%;
       background: rgba(225, 29, 72, 0.2); border: 2px solid #e11d48;
@@ -184,9 +182,7 @@
       box-shadow: 0 0 10px rgba(225, 29, 72, 0.5);
       animation: pulse-ring 2s infinite;
     }
-    .gps-marker-inner {
-      width: 12px; height: 12px; background: #ffffff; border: 3px solid #e11d48; border-radius: 50%;
-    }
+    .gps-marker-inner { width: 12px; height: 12px; background: #ffffff; border: 3px solid #e11d48; border-radius: 50%; }
     @keyframes pulse-ring {
       0% { transform: scale(0.95); opacity: 0.8; }
       50% { transform: scale(1.15); opacity: 1; }
@@ -217,17 +213,17 @@
 
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
-      <div class="tags-row" id="tags-row" style="display: none;">
-        <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <span class="tag-stop-active" id="tag-stop">PARADA --</span>
-        <span class="tag-purple-light" id="tag-order" style="display: none;">ORDEM&nbsp;<span id="current-order-num">1</span></span>
+      <div class="tags-row" id="tags-row" style="display: none !important;">
+        <span class="tag-purple-light" id="tag-step">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
+        <span class="tag-stop-active" id="tag-stop">PARADA 1</span>
+        <span class="tag-purple-light" id="tag-order">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box" style="color: #ff5500;"></i>
-          <span id="tag-packages">0 PACOTES</span>
+          <span id="tag-packages">1 PACOTE(S)</span>
           <i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px; color: #ff5500;"></i>
         </button>
       </div>
-      <div class="address-title" id="address-title">Aguardando Planilha</div>
+      <div class="address-title" id="address-title">AGUARDANDO PLANILHA</div>
       <div class="address-subtitle" id="address-subtitle">Abra o menu e carregue o arquivo</div>
       <div class="actions-row" id="actions-container"></div>
     </div>
@@ -296,7 +292,6 @@
 
     let stopsData = [];
     let currentIndex = 0;
-    let routeStarted = false;
     let map;
     let markers = [];
     let userMarker = null;
@@ -449,12 +444,6 @@
       renderStops(false);
     }
 
-    function startRoute() {
-      routeStarted = true;
-      optimizeRouteSequential();
-      renderStops(true);
-    }
-
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -513,17 +502,13 @@
 
     function updateUI() {
       const tagsRow = document.getElementById('tags-row');
-      const tagStep = document.getElementById('tag-step');
-      const tagOrder = document.getElementById('tag-order');
       const actionsContainer = document.getElementById('actions-container');
 
       if (stopsData.length === 0) {
         document.getElementById('time-val').innerText = '0m';
         document.getElementById('delivered-pkgs').innerText = '0';
         document.getElementById('total-pkgs').innerText = '0';
-        tagsRow.style.display = 'none';
-        tagStep.style.display = 'none';
-        tagOrder.style.display = 'none';
+        tagsRow.style.setProperty('display', 'none', 'important');
         document.getElementById('address-title').innerText = 'AGUARDANDO PLANILHA';
         document.getElementById('address-subtitle').innerText = 'Abra o menu e carregue o arquivo';
         
@@ -536,7 +521,7 @@
         return;
       }
 
-      tagsRow.style.display = 'flex';
+      tagsRow.style.setProperty('display', 'flex', 'important');
       const stop = stopsData[currentIndex] || stopsData[0];
       let totalPkgs = 0, deliveredPkgs = 0;
       stopsData.forEach(s => {
@@ -551,16 +536,9 @@
       const deliveredCount = stopsData.filter(s => s.status === 'delivered').length;
       const totalCount = stopsData.length;
 
-      if (routeStarted) {
-        tagStep.style.display = 'inline-flex';
-        tagOrder.style.display = 'inline-flex';
-        document.getElementById('current-step-num').innerText = deliveredCount + 1;
-        document.getElementById('total-step-num').innerText = totalCount;
-        document.getElementById('current-order-num').innerText = currentIndex + 1;
-      } else {
-        tagStep.style.display = 'none';
-        tagOrder.style.display = 'none';
-      }
+      document.getElementById('current-step-num').innerText = deliveredCount + 1;
+      document.getElementById('total-step-num').innerText = totalCount;
+      document.getElementById('current-order-num').innerText = currentIndex + 1;
 
       document.getElementById('tag-stop').innerText = `PARADA ${stop.originalStop}`;
       document.getElementById('tag-packages').innerText = `${stop.packagesCount} PACOTE(S)`;
@@ -569,18 +547,12 @@
 
       const wazeUrl = `https://waze.com/ul?ll=${stop.lat},${stop.lng}&navigate=yes`;
 
-      if (!routeStarted) {
-        actionsContainer.innerHTML = `
-          <a href="${wazeUrl}" target="_blank" class="btn-waze-blue"><i class="fa-solid fa-location-arrow"></i> WAZE</a>
-          <button class="btn-start-route" onclick="startRoute()"><i class="fa-solid fa-play"></i> INICIAR ROTA</button>
-        `;
-      } else {
-        actionsContainer.innerHTML = `
-          <a href="${wazeUrl}" target="_blank" class="btn-waze-blue"><i class="fa-solid fa-location-arrow" style="font-size:14px;"></i><span>WAZE</span></a>
-          <button class="btn-fail" onclick="setDeliveryStatus('failed')"><i class="fa-solid fa-box-archive" style="font-size:14px;"></i><span>FALHA</span></button>
-          <button class="btn-success" onclick="setDeliveryStatus('delivered')"><i class="fa-solid fa-box-check" style="font-size:14px;"></i><span>ENTREGUE</span></button>
-        `;
-      }
+      actionsContainer.innerHTML = `
+        <a href="${wazeUrl}" target="_blank" class="btn-waze-blue"><i class="fa-solid fa-location-arrow" style="font-size:14px;"></i><span>WAZE</span></a>
+        <button class="btn-fail" onclick="setDeliveryStatus('failed')"><i class="fa-solid fa-box-archive" style="font-size:14px;"></i><span>FALHA</span></button>
+        <button class="btn-success" onclick="setDeliveryStatus('delivered')"><i class="fa-solid fa-box-check" style="font-size:14px;"></i><span>ENTREGUE</span></button>
+      `;
+      
       renderList();
     }
 
@@ -698,7 +670,10 @@
         });
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
-          stopsData = newStops; routeStarted = false; optimizeRouteSequential(); renderStops(true); toggleModal('paradas-modal', false);
+          stopsData = newStops;
+          optimizeRouteSequential();
+          renderStops(true);
+          toggleModal('paradas-modal', false);
         } else {
           alert("Não foram encontradas coordenadas válidas na planilha.");
         }
