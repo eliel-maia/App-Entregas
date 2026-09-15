@@ -217,7 +217,7 @@
 
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
-      <div class="tags-row">
+      <div class="tags-row" id="tags-row" style="display: none;">
         <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
         <span class="tag-stop-active" id="tag-stop">PARADA --</span>
         <span class="tag-purple-light" id="tag-order" style="display: none;">ORDEM&nbsp;<span id="current-order-num">1</span></span>
@@ -512,6 +512,7 @@
     }
 
     function updateUI() {
+      const tagsRow = document.getElementById('tags-row');
       const tagStep = document.getElementById('tag-step');
       const tagOrder = document.getElementById('tag-order');
       const actionsContainer = document.getElementById('actions-container');
@@ -520,22 +521,22 @@
         document.getElementById('time-val').innerText = '0m';
         document.getElementById('delivered-pkgs').innerText = '0';
         document.getElementById('total-pkgs').innerText = '0';
+        tagsRow.style.display = 'none';
         tagStep.style.display = 'none';
         tagOrder.style.display = 'none';
-        document.getElementById('tag-stop').innerText = 'PARADA --';
-        document.getElementById('tag-packages').innerText = '0 PACOTES';
-        document.getElementById('address-title').innerText = 'Aguardando Planilha';
+        document.getElementById('address-title').innerText = 'AGUARDANDO PLANILHA';
         document.getElementById('address-subtitle').innerText = 'Abra o menu e carregue o arquivo';
         
         actionsContainer.innerHTML = `
-          <button class="btn-start-route" style="flex:1;" onclick="toggleModal('paradas-modal', true)">
+          <label for="excel-upload" class="btn-start-route" style="flex:1; margin:0; cursor:pointer;">
             <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA
-          </button>
+          </label>
         `;
         renderList();
         return;
       }
 
+      tagsRow.style.display = 'flex';
       const stop = stopsData[currentIndex] || stopsData[0];
       let totalPkgs = 0, deliveredPkgs = 0;
       stopsData.forEach(s => {
