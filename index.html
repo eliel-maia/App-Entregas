@@ -78,18 +78,6 @@
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
     }
 
-    /* Tag PARADA modificada para cor laranja (igual ao balão) */
-    .tag-stop-orange {
-      background: #fff3eb; color: #ff5500; border: 1px solid #ffdecb; padding: 5px 11px;
-      border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
-    }
-
-    /* Tag ORDEM com espaçamento corrigido e cor azul clara */
-    .tag-order-style {
-      background: #e0f2fe; color: #0369a1; padding: 5px 11px; border-radius: 12px;
-      font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
-    }
-
     .tag-packages-btn {
       background: #fff3eb; color: #ff5500; border: 1px solid #ffdecb; padding: 5px 11px; 
       border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; display: inline-flex;
@@ -227,10 +215,10 @@
       <div class="sheet-handle"></div>
       <div class="tags-row">
         <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <!-- Tag PARADA alterada para cor laranja -->
-        <span class="tag-stop-orange" id="tag-stop">PARADA --</span>
-        <!-- Tag ORDEM com espaço entre o texto e o número -->
-        <span class="tag-order-style" id="tag-order" style="display: none;">ORDEM <span id="current-order-num">1</span></span>
+        <!-- Tag PARADA com cor roxa original (.tag-purple-light) -->
+        <span class="tag-purple-light" id="tag-stop">PARADA --</span>
+        <!-- Tag ORDEM com cor roxa original e espaço garantido entre o texto e o número -->
+        <span class="tag-purple-light" id="tag-order" style="display: none;">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box"></i><span id="tag-packages">0 PACOTES</span><i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px;"></i>
         </button>
@@ -673,7 +661,7 @@
         div.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
             <div>
-              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">ORDEM ${originalIndex + 1}</span>
+              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">ORDEM&nbsp;${originalIndex + 1}</span>
               <div style="font-size: 13px; font-weight: 700; color: #111827; text-transform: uppercase; margin-top: 2px;">${item.address}</div>
               <div style="font-size: 11px; color: #6b7280;">${item.neighborhood}${item.city ? ' - ' + item.city : ''}</div>
             </div>
