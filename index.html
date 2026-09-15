@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entregas</title>
+  <title>Entr</title>
   
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Entregas">
+  <meta name="apple-mobile-web-app-title" content="Entr">
 
   <!-- MapLibre GL CSS -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
@@ -76,12 +76,14 @@
     .tag-purple-light { 
       background: #f0f0ff; color: #5046e5; padding: 5px 11px; border-radius: 12px; 
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
+      border: 1.5px solid transparent;
     }
 
+    /* Tag PARADA com fundo azul claro e borda/texto laranja */
     .tag-stop-active {
-      background: #ff5500; color: #ffffff; padding: 5px 11px; border-radius: 12px;
+      background: #f0f0ff; color: #ff5500; padding: 5px 11px; border-radius: 12px;
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
-      box-shadow: 0 2px 6px rgba(255, 85, 0, 0.3);
+      border: 1.5px solid #ff5500;
     }
 
     .tag-packages-btn {
