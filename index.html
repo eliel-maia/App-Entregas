@@ -78,10 +78,18 @@
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
     }
 
+    /* Tag Parada estilizada igual ao balão ativo do mapa */
+    .tag-stop-active {
+      background: #ff5500; color: #ffffff; padding: 5px 11px; border-radius: 12px;
+      font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
+      box-shadow: 0 2px 6px rgba(255, 85, 0, 0.3);
+    }
+
+    /* Tag Pacotes com o mesmo fundo da tag Ordem (#f0f0ff) e textos/ícones com laranja vivo (#ff5500) */
     .tag-packages-btn {
-      background: #fff3eb; color: #ff5500; border: 1px solid #ffdecb; padding: 5px 11px; 
+      background: #f0f0ff; color: #ff5500; padding: 5px 11px; 
       border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; display: inline-flex;
-      align-items: center; gap: 4px; text-transform: uppercase;
+      align-items: center; gap: 4px; text-transform: uppercase; border: none;
     }
 
     .address-title { 
@@ -213,10 +221,12 @@
       <div class="sheet-handle"></div>
       <div class="tags-row">
         <span class="tag-purple-light" id="tag-step" style="display: none;">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <span class="tag-purple-light" id="tag-stop">PARADA --</span>
+        <span class="tag-stop-active" id="tag-stop">PARADA --</span>
         <span class="tag-purple-light" id="tag-order" style="display: none;">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
-          <i class="fa-solid fa-box"></i><span id="tag-packages">0 PACOTES</span><i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px;"></i>
+          <i class="fa-solid fa-box" style="color: #ff5500;"></i>
+          <span id="tag-packages">0 PACOTES</span>
+          <i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px; color: #ff5500;"></i>
         </button>
       </div>
       <div class="address-title" id="address-title">Aguardando Planilha</div>
