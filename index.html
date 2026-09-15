@@ -53,8 +53,8 @@
 
     .stats-card {
       background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
-      border-radius: 16px; padding: 6px 10px;
-      display: flex; align-items: center; gap: 8px;
+      border-radius: 16px; padding: 6px 12px;
+      display: flex; align-items: center; gap: 10px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.08);
       flex-shrink: 0;
     }
@@ -63,15 +63,6 @@
     .stat-label { font-size: 8px; font-weight: 700; color: #9ca3af; letter-spacing: 0.5px; text-transform: uppercase; }
     .stat-value { font-size: 11px; font-weight: 800; color: #1f2937; margin-top: 1px; }
     .stat-divider { width: 1px; height: 18px; background-color: rgba(229, 231, 235, 0.8); }
-
-    /* Estilo para a lista vertical no lugar do antigo DIST */
-    .stop-numbers-vertical {
-      display: flex; flex-direction: column; align-items: center; max-height: 70px; overflow-y: auto; width: 45px;
-    }
-    .mini-stop-badge {
-      background: #f0f0ff; color: #5046e5; font-size: 9px; font-weight: 800; padding: 1px 4px;
-      border-radius: 4px; margin-bottom: 2px; text-align: center; width: 100%;
-    }
 
     .bottom-sheet {
       position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: white;
@@ -213,12 +204,6 @@
         <div class="stat-item"><span class="stat-label">RESTANTE</span><span class="stat-value" id="time-val">0m</span></div>
         <div class="stat-divider"></div>
         <div class="stat-item"><span class="stat-label">ENTREGAS</span><span class="stat-value"><span id="delivered-pkgs">0</span>/<span id="total-pkgs">0</span></span></div>
-        <div class="stat-divider"></div>
-        <!-- Bloco alterado para mostrar o número da parada ou a lista vertical de pacotes da parada selecionada -->
-        <div class="stat-item" id="top-right-slot" style="min-width: 35px;">
-          <span class="stat-label">PARADA</span>
-          <span class="stat-value" id="top-right-val">--</span>
-        </div>
       </div>
     </div>
 
@@ -527,7 +512,6 @@
         document.getElementById('time-val').innerText = '0m';
         document.getElementById('delivered-pkgs').innerText = '0';
         document.getElementById('total-pkgs').innerText = '0';
-        document.getElementById('top-right-slot').innerHTML = '<span class="stat-label">PARADA</span><span class="stat-value">--</span>';
         tagStep.style.display = 'none';
         tagOrder.style.display = 'none';
         document.getElementById('tag-stop').innerText = 'PARADA --';
@@ -554,22 +538,6 @@
       document.getElementById('time-val').innerText = calculateRemainingTime();
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
-
-      // Lógica do Canto Superior Direito: se houver mais de 1 pacote na parada, mostra lista vertical de stops. Se não, mostra o número único da parada.
-      const topRightSlot = document.getElementById('top-right-slot');
-      if (stop.packagesList && stop.packagesList.length > 1) {
-        let verticalHtml = '<span class="stat-label">PARADAS</span><div class="stop-numbers-vertical">';
-        stop.packagesList.forEach(pkg => {
-          verticalHtml += `<span class="mini-stop-badge">${pkg.stopNumber}</span>`;
-        });
-        verticalHtml += '</div>';
-        topRightSlot.innerHTML = verticalHtml;
-      } else {
-        topRightSlot.innerHTML = `
-          <span class="stat-label">PARADA</span>
-          <span class="stat-value">${stop.originalStop}</span>
-        `;
-      }
 
       const deliveredCount = stopsData.filter(s => s.status === 'delivered').length;
       const totalCount = stopsData.length;
