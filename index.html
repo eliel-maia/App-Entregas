@@ -85,6 +85,28 @@
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
     .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     
+    /* CONTADOR DE PARADAS (BOLINHA AZUL + TEXTO PRETO SEM FUNDO) */
+    .step-counter-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #111827;
+      background: transparent;
+      border: none;
+      padding: 0;
+      margin-right: 4px;
+    }
+
+    .step-counter-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #5046e5;
+      display: inline-block;
+    }
+
     /* TAGS AZUIS */
     .tag-blue { 
       background: #eeefff; color: #5046e5; padding: 6px 12px; border-radius: 12px; 
@@ -233,7 +255,12 @@
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
-        <span class="tag-blue" id="tag-step">•&nbsp;<span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
+        <!-- CONTADOR ESTILO BOLINHA + TEXTO SEM FUNDO -->
+        <div class="step-counter-indicator" id="tag-step">
+          <span class="step-counter-dot"></span>
+          <span id="step-counter-text"><span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
+        </div>
+
         <span class="tag-blue" id="tag-stop">PARADA&nbsp;<span id="current-stop-num">1</span></span>
         <span class="tag-blue" id="tag-order">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
@@ -613,7 +640,6 @@
       document.getElementById('current-step-num').innerText = deliveredCount + 1;
       document.getElementById('total-step-num').innerText = totalCount;
       
-      // MANTÉM ESPAÇO EXPLÍCITO APÓS OS TÍTULOS
       document.getElementById('tag-stop').innerHTML = `PARADA&nbsp;${stop.originalStop}`;
       document.getElementById('tag-order').innerHTML = `ORDEM&nbsp;${currentIndex + 1}`;
 
