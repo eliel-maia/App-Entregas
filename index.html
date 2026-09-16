@@ -419,7 +419,7 @@
         startLiveTracking();
       });
 
-      // RESTAURAÇÃO DO RENDERIZADOR WEBGL QUANDO VOLTAR DO BACKGROUND
+      /* RESTAURAÇÃO DO RENDERIZADOR WEBGL QUANDO VOLTAR DO BACKGROUND */
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && map) {
           setTimeout(() => {
@@ -657,7 +657,7 @@
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
 
-    /* ABRIR MODAL DE PACOTES - FORMATADO IGUAL AO CARD DA LISTA DE PARADAS */
+    /* ABRIR MODAL DE PACOTES - EXIBE A ORDEM ESPECÍFICA DE CADA PACOTE */
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
@@ -675,8 +675,9 @@
         packagesHtml += `
           <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span class="stop-badge">PARADA ${pkg.stopNumber}</span>
-              <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 2px;">${pkg.code}</div>
+              <span class="stop-badge" style="background:#5046e5;">ORDEM ${pkg.order}</span>
+              <span class="stop-badge" style="background:#ff5500; margin-left: 4px;">PARADA ${pkg.stopNumber}</span>
+              <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 4px;">${pkg.code}</div>
             </div>
             <i class="fa-solid fa-barcode" style="font-size: 20px; color: #5046e5;"></i>
           </div>
@@ -688,7 +689,7 @@
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
           <div>
-            <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">ORDEM&nbsp;${orderNum}</span>
+            <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">PARADA DA ROTA ${orderNum}</span>
             <div style="font-size: 13px; font-weight: 700; color: #111827; text-transform: uppercase; margin-top: 2px;">${stop.address}</div>
             <div style="font-size: 11px; color: #6b7280;">${stop.neighborhood}${stop.city ? ' - ' + stop.city : ''}</div>
           </div>
@@ -730,8 +731,9 @@
           packagesHtml += `
             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
               <div>
-                <span class="stop-badge">PARADA ${pkg.stopNumber}</span>
-                <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 2px;">${pkg.code}</div>
+                <span class="stop-badge" style="background:#5046e5;">ORDEM ${pkg.order}</span>
+                <span class="stop-badge" style="background:#ff5500; margin-left: 4px;">PARADA ${pkg.stopNumber}</span>
+                <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 4px;">${pkg.code}</div>
               </div>
               <i class="fa-solid fa-barcode" style="font-size: 20px; color: #5046e5;"></i>
             </div>
@@ -745,7 +747,7 @@
         div.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
             <div>
-              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">ORDEM&nbsp;${originalIndex + 1}</span>
+              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">PARADA DA ROTA ${originalIndex + 1}</span>
               <div style="font-size: 13px; font-weight: 700; color: #111827; text-transform: uppercase; margin-top: 2px;">${item.address}</div>
               <div style="font-size: 11px; color: #6b7280;">${item.neighborhood}${item.city ? ' - ' + item.city : ''}</div>
             </div>
@@ -779,6 +781,9 @@
             const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `+${index + 1}`;
             const fullAddress = String(row['Destination Address'] || '').trim();
 
+            // Captura a ordem original sequencial da linha (1-based) ou coluna 'Order'/'Ordem' se existir na planilha
+            const rawOrder = row['Order'] || row['Ordem'] || (index + 1);
+
             // Chave única: Coordenadas + Endereço Completo em minúsculas
             const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
 
@@ -787,7 +792,11 @@
             if (stopsMap.has(key)) {
               let existing = stopsMap.get(key);
               existing.packagesCount += 1;
-              existing.packagesList.push({ stopNumber: rawStop, code: spxCode });
+              existing.packagesList.push({ 
+                order: rawOrder, 
+                stopNumber: rawStop, 
+                code: spxCode 
+              });
               if (!existing.stopsList.includes(rawStop)) {
                 existing.stopsList.push(rawStop);
                 existing.stopsList.sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '')) || 0) - (parseInt(b.replace(/[^0-9]/g, '')) || 0));
@@ -802,7 +811,11 @@
                 neighborhood: row['Bairro'] || '', 
                 city: row['City'] || '',
                 packagesCount: 1, 
-                packagesList: [{ stopNumber: rawStop, code: spxCode }], 
+                packagesList: [{ 
+                  order: rawOrder, 
+                  stopNumber: rawStop, 
+                  code: spxCode 
+                }], 
                 lat: lat, 
                 lng: lng, 
                 status: 'pending'
