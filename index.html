@@ -4,14 +4,14 @@
   <!-- CONFIGURAÇÕES DE CODIFICAÇÃO E VISUALIZAÇÃO MOBILE -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entr</title>
+  <title>Entregas</title>
   
   <!-- CONFIGURAÇÕES DE PWA (PROGRESSIVE WEB APP) E TEMA -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Entr">
+  <meta name="apple-mobile-web-app-title" content="Entregas">
 
   <!-- BIBLIOTECAS EXTERNAS (MAPLIBRE GL E FONT AWESOME) -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
@@ -470,7 +470,7 @@
       currentIndex = index;
       const stop = stopsData[currentIndex];
       if (stop && !isNaN(stop.lat)) {
-        map.flyTo({ center: [stop.lng, stop.lat], zoom: 15 });
+        map.flyTo({ center: [stop.lng, stop.lat], zoom:16 });
       }
       renderStops(false);
     }
@@ -528,7 +528,7 @@
       
       const activeStop = stopsData[currentIndex];
       if (activeStop && !isNaN(activeStop.lat)) {
-        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 15 });
+        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
       }
     }
 
