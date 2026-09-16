@@ -770,14 +770,24 @@
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
         const stopsMap = new Map();
+
         json.forEach((row, index) => {
           let lat = parseFloat(row['Latitude']);
           let lng = parseFloat(row['Longitude']);
+          
           if (!isNaN(lat) && !isNaN(lng) && lat < 0 && lng < 0) {
             const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `+${index + 1}`;
-            const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}`;
+            const fullAddress = String(row['Destination Address'] || '').trim();
+
+            // Chave única: Coordenadas + Endereço Completo em minúsculas.
+            // Garante que mesmo que as coordenadas sejam idênticas na planilha,
+            // numerações ou endereços diferentes gerem paradas individuais.
+            const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
+
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
+
             if (stopsMap.has(key)) {
+              // Se for EXATAMENTE o mesmo endereço e mesmo imóvel, agrupa o pacote adicional
               let existing = stopsMap.get(key);
               existing.packagesCount += 1;
               existing.packagesList.push({ stopNumber: rawStop, code: spxCode });
@@ -787,14 +797,24 @@
                 existing.originalStop = existing.stopsList[0];
               }
             } else {
+              // Se o endereço ou número do imóvel for diferente, cria uma NOVA parada
               stopsMap.set(key, {
-                id: key, originalStop: rawStop, stopsList: [rawStop],
-                address: row['Destination Address'] || 'Endereço', neighborhood: row['Bairro'] || '', city: row['City'] || '',
-                packagesCount: 1, packagesList: [{ stopNumber: rawStop, code: spxCode }], lat: lat, lng: lng, status: 'pending'
+                id: key, 
+                originalStop: rawStop, 
+                stopsList: [rawStop],
+                address: fullAddress || 'Endereço', 
+                neighborhood: row['Bairro'] || '', 
+                city: row['City'] || '',
+                packagesCount: 1, 
+                packagesList: [{ stopNumber: rawStop, code: spxCode }], 
+                lat: lat, 
+                lng: lng, 
+                status: 'pending'
               });
             }
           }
         });
+
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
           stopsData = newStops;
