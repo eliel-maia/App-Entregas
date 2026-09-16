@@ -233,9 +233,9 @@
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
-        <span class="tag-blue" id="tag-step">•<span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
-        <span class="tag-blue" id="tag-stop">PARADA <span id="current-stop-num">1</span></span>
-        <span class="tag-blue" id="tag-order">ORDEM <span id="current-order-num">1</span></span>
+        <span class="tag-blue" id="tag-step">•&nbsp;<span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
+        <span class="tag-blue" id="tag-stop">PARADA&nbsp;<span id="current-stop-num">1</span></span>
+        <span class="tag-blue" id="tag-order">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box" style="color: #ff5500;"></i>
           <span id="tag-packages">1 PACOTE(S)</span>
@@ -612,8 +612,10 @@
 
       document.getElementById('current-step-num').innerText = deliveredCount + 1;
       document.getElementById('total-step-num').innerText = totalCount;
-      document.getElementById('current-stop-num').innerText = stop.originalStop;
-      document.getElementById('current-order-num').innerText = currentIndex + 1;
+      
+      // MANTÉM ESPAÇO EXPLÍCITO APÓS OS TÍTULOS
+      document.getElementById('tag-stop').innerHTML = `PARADA&nbsp;${stop.originalStop}`;
+      document.getElementById('tag-order').innerHTML = `ORDEM&nbsp;${currentIndex + 1}`;
 
       document.getElementById('tag-packages').innerText = `${stop.packagesCount} PACOTE(S)`;
       document.getElementById('address-title').innerText = stop.address;
