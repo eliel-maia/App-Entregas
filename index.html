@@ -259,7 +259,6 @@
         </div>
 
         <span class="tag-blue" id="tag-stop">PARADA&nbsp;<span id="current-stop-num">1</span></span>
-        <span class="tag-blue" id="tag-order">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box" style="color: #ff5500;"></i>
           <span id="tag-packages">1 PACOTE(S)</span>
@@ -635,7 +634,6 @@
       document.getElementById('total-step-num').innerText = totalCount;
       
       document.getElementById('tag-stop').innerHTML = `PARADA&nbsp;${stop.originalStop}`;
-      document.getElementById('tag-order').innerHTML = `ORDEM&nbsp;${currentIndex + 1}`;
 
       document.getElementById('tag-packages').innerText = `${stop.packagesCount} PACOTE(S)`;
       document.getElementById('address-title').innerText = stop.address;
@@ -657,11 +655,10 @@
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
 
-    /* ABRIR MODAL DE PACOTES - EXIBE A ORDEM ESPECÍFICA DE CADA PACOTE */
+    /* ABRIR MODAL DE PACOTES - EXIBE APENAS A PARADA DE CADA PACOTE */
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
-      const orderNum = currentIndex + 1;
 
       const listContainer = document.getElementById('packages-list');
       listContainer.innerHTML = '';
@@ -675,8 +672,7 @@
         packagesHtml += `
           <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span class="stop-badge" style="background:#5046e5;">ORDEM ${pkg.order}</span>
-              <span class="stop-badge" style="background:#ff5500; margin-left: 4px;">PARADA ${pkg.stopNumber}</span>
+              <span class="stop-badge" style="background:#5046e5;">PARADA ${pkg.stopNumber}</span>
               <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 4px;">${pkg.code}</div>
             </div>
             <i class="fa-solid fa-barcode" style="font-size: 20px; color: #5046e5;"></i>
@@ -689,7 +685,7 @@
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
           <div>
-            <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">PARADA DA ROTA ${orderNum}</span>
+            <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">PARADA ${stop.originalStop}</span>
             <div style="font-size: 13px; font-weight: 700; color: #111827; text-transform: uppercase; margin-top: 2px;">${stop.address}</div>
             <div style="font-size: 11px; color: #6b7280;">${stop.neighborhood}${stop.city ? ' - ' + stop.city : ''}</div>
           </div>
@@ -731,8 +727,7 @@
           packagesHtml += `
             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;">
               <div>
-                <span class="stop-badge" style="background:#5046e5;">ORDEM ${pkg.order}</span>
-                <span class="stop-badge" style="background:#ff5500; margin-left: 4px;">PARADA ${pkg.stopNumber}</span>
+                <span class="stop-badge" style="background:#5046e5;">PARADA ${pkg.stopNumber}</span>
                 <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 4px;">${pkg.code}</div>
               </div>
               <i class="fa-solid fa-barcode" style="font-size: 20px; color: #5046e5;"></i>
@@ -747,7 +742,7 @@
         div.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
             <div>
-              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">PARADA DA ROTA ${originalIndex + 1}</span>
+              <span style="font-size: 10px; font-weight: 800; color: #5046e5; text-transform: uppercase;">PARADA ${item.originalStop}</span>
               <div style="font-size: 13px; font-weight: 700; color: #111827; text-transform: uppercase; margin-top: 2px;">${item.address}</div>
               <div style="font-size: 11px; color: #6b7280;">${item.neighborhood}${item.city ? ' - ' + item.city : ''}</div>
             </div>
@@ -781,9 +776,6 @@
             const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `+${index + 1}`;
             const fullAddress = String(row['Destination Address'] || '').trim();
 
-            // Captura a ordem original sequencial da linha (1-based) ou coluna 'Order'/'Ordem' se existir na planilha
-            const rawOrder = row['Order'] || row['Ordem'] || (index + 1);
-
             // Chave única: Coordenadas + Endereço Completo em minúsculas
             const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
 
@@ -793,7 +785,6 @@
               let existing = stopsMap.get(key);
               existing.packagesCount += 1;
               existing.packagesList.push({ 
-                order: rawOrder, 
                 stopNumber: rawStop, 
                 code: spxCode 
               });
@@ -812,7 +803,6 @@
                 city: row['City'] || '',
                 packagesCount: 1, 
                 packagesList: [{ 
-                  order: rawOrder, 
                   stopNumber: rawStop, 
                   code: spxCode 
                 }], 
