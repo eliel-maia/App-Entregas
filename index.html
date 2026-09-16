@@ -85,22 +85,18 @@
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
     .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     
-    .tag-purple-light { 
-      background: #f0f0ff; color: #5046e5; padding: 5px 11px; border-radius: 12px; 
+    /* TAGS AZUIS */
+    .tag-blue { 
+      background: #eeefff; color: #5046e5; padding: 6px 12px; border-radius: 12px; 
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
-      border: 1.5px solid transparent;
+      border: none;
     }
 
-    .tag-stop-active {
-      background: #f0f0ff; color: #5046e5; padding: 5px 11px; border-radius: 12px;
-      font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
-      border: 1.5px solid #ff5500;
-    }
-
+    /* TAG DE PACOTES LARANJA */
     .tag-packages-btn {
-      background: #f0f0ff; color: #ff5500; padding: 5px 11px; 
+      background: #fff2ec; color: #ff5500; padding: 6px 12px; 
       border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; display: inline-flex;
-      align-items: center; gap: 4px; text-transform: uppercase; border: none;
+      align-items: center; gap: 6px; text-transform: uppercase; border: none;
     }
 
     .address-title { 
@@ -237,9 +233,9 @@
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
-        <span class="tag-purple-light" id="tag-step">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <span class="tag-purple-light" id="tag-order">ORDEM&nbsp;<span id="current-order-num">1</span></span>
-        <span class="tag-stop-active" id="tag-stop">PARADA 1</span>
+        <span class="tag-blue" id="tag-step">•<span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
+        <span class="tag-blue" id="tag-stop">PARADA <span id="current-stop-num">1</span></span>
+        <span class="tag-blue" id="tag-order">ORDEM <span id="current-order-num">1</span></span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
           <i class="fa-solid fa-box" style="color: #ff5500;"></i>
           <span id="tag-packages">1 PACOTE(S)</span>
@@ -616,9 +612,9 @@
 
       document.getElementById('current-step-num').innerText = deliveredCount + 1;
       document.getElementById('total-step-num').innerText = totalCount;
+      document.getElementById('current-stop-num').innerText = stop.originalStop;
       document.getElementById('current-order-num').innerText = currentIndex + 1;
 
-      document.getElementById('tag-stop').innerText = `PARADA ${stop.originalStop}`;
       document.getElementById('tag-packages').innerText = `${stop.packagesCount} PACOTE(S)`;
       document.getElementById('address-title').innerText = stop.address;
       document.getElementById('address-subtitle').innerText = `${stop.neighborhood}, ${stop.city}`;
