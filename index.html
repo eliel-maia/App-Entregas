@@ -73,13 +73,13 @@
 
     /* PAINEL INFERIOR (BOTTOM SHEET) - INFORMAÇÕES DA ENTREGA ATUAL */
     .bottom-sheet {
-      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: rgba(255,255,255,0.70);/* Aumentada a transparência (de 85% para 70%) */
-      background: rgba(252, 252, 254, 0.85); /* Aumentada a transparência (de 85% para 70%) */
-      backdrop-filter: blur(8px) saturate(180%); /* Dobrado o desfoque (de 8px para 12px) + realce de cores */
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
+      background: rgba(252, 252, 254, 0.85);
+      backdrop-filter: blur(16px) saturate(180%);
       -webkit-backdrop-filter: blur(16px) saturate(180%);
       border-top-left-radius: 22px; border-top-right-radius: 22px; padding: 14px 18px 22px 18px;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
-      border-top: 1px solid rgba(255, 255, 255, 0.5); /* Borda sutil de brilho no topo */
+      border-top: 1px solid rgba(255, 255, 255, 0.5);
     }
 
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
@@ -166,7 +166,7 @@
       border-radius: 10px; font-weight: 700; font-size: 11px; margin-bottom: 12px; cursor: pointer; text-align: center; display: block;
     }
 
-    /* ESTILIZAÇÃO DOS MARCADORES DO MAPA (PINOS DE ENTREGA E GPS EM TEMPO REAL) */
+    /* ESTILIZAÇÃO DOS MARCADORES DO MAPA */
     .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; cursor: pointer; }
     .custom-pin {
       position: relative; width: 28px; height: 28px; border-radius: 50%;
@@ -325,6 +325,31 @@
     let userMarker = null;
     let userLocation = null;
 
+    /* GERENCIAMENTO DE PERSISTÊNCIA LOCAL (LOCALSTORAGE) */
+    function saveDataToStorage() {
+      try {
+        localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
+        localStorage.setItem('delivery_current_index', currentIndex.toString());
+      } catch (e) {
+        console.error("Erro ao salvar no storage:", e);
+      }
+    }
+
+    function loadDataFromStorage() {
+      try {
+        const savedStops = localStorage.getItem('delivery_stops_data');
+        const savedIndex = localStorage.getItem('delivery_current_index');
+        if (savedStops) {
+          stopsData = JSON.parse(savedStops);
+          currentIndex = savedIndex ? parseInt(savedIndex, 10) : 0;
+          return true;
+        }
+      } catch (e) {
+        console.error("Erro ao carregar do storage:", e);
+      }
+      return false;
+    }
+
     /* CÁLCULO DE TEMPO ESTIMADO DE ROTA PENDENTE */
     function calculateRemainingTime() {
       const pendingStopsCount = stopsData.filter(s => s.status === 'pending').length;
@@ -359,6 +384,7 @@
       }
       stopsData = ordered;
       currentIndex = 0;
+      saveDataToStorage();
     }
 
     /* INICIALIZAÇÃO E CONFIGURAÇÃO DO MAPA */
@@ -371,8 +397,21 @@
       });
 
       map.on('load', () => {
-        renderStops(false);
+        const hasData = loadDataFromStorage();
+        renderStops(hasData);
         startLiveTracking();
+      });
+
+      // RESTAURAÇÃO DO RENDERIZADOR WEBGL QUANDO VOLTAR DO BACKGROUND
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && map) {
+          setTimeout(() => {
+            map.resize();
+            if (stopsData[currentIndex]) {
+              map.setCenter([stopsData[currentIndex].lng, stopsData[currentIndex].lat]);
+            }
+          }, 200);
+        }
       });
     }
 
@@ -472,6 +511,7 @@
     function selectStop(index) {
       if (stopsData.length === 0) return;
       currentIndex = index;
+      saveDataToStorage();
       const stop = stopsData[currentIndex];
       if (stop && !isNaN(stop.lat)) {
         map.flyTo({ center: [stop.lng, stop.lat], zoom:16 });
@@ -528,6 +568,7 @@
       }
 
       if (nextIndex !== -1) currentIndex = nextIndex;
+      saveDataToStorage();
       renderStops(false);
       
       const activeStop = stopsData[currentIndex];
