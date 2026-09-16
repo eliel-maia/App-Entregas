@@ -171,13 +171,19 @@
     .stop-item.completed { background: #f0fdf4; border-color: #bbf7d0; }
     .stop-item.failed { background: #fef2f2; border-color: #fecaca; }
 
+    /* CARD DE PACOTE NO MODAL */
     .pkg-card {
-      padding: 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0;
-      margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+      padding: 12px; border-radius: 12px; background: #ffffff; border: 1px solid #e2e8f0;
+      margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .stop-badge {
-      background: #5046e5; color: white; padding: 4px 10px; border-radius: 8px;
-      font-size: 11px; font-weight: 800; display: inline-block; margin-bottom: 4px;
+      background: #5046e5; color: white; padding: 4px 8px; border-radius: 8px;
+      font-size: 10px; font-weight: 800; display: inline-block;
+    }
+    .order-badge {
+      background: #eeefff; color: #5046e5; padding: 4px 8px; border-radius: 8px;
+      font-size: 10px; font-weight: 800; display: inline-block;
     }
     .upload-btn {
       width: 100%; padding: 10px; background: #5046e5; color: white; border: none;
@@ -292,10 +298,7 @@
     <!-- MODAL 2: DETALHES DOS PACOTES DA PARADA SELECIONADA -->
     <div id="pacotes-modal" class="modal">
       <div class="modal-header">
-        <div>
-          <h3 id="modal-pkg-stop-title">Pacotes do Endereço</h3>
-          <p id="modal-pkg-address" style="font-size: 12px; color: #666;"></p>
-        </div>
+        <h3>Pacotes</h3>
         <button class="btn-close-modal" onclick="toggleModal('pacotes-modal', false)"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
@@ -663,23 +666,42 @@
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
 
+    /* ABRIR MODAL DE PACOTES DA PARADA ATUAL - COM ENDEREÇO E ORDEM EM CADA PACOTE */
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
-      document.getElementById('modal-pkg-stop-title').innerText = `Pacotes (${stop.packagesCount})`;
-      document.getElementById('modal-pkg-address').innerText = `${stop.address} - ${stop.neighborhood}`;
+      const orderNum = currentIndex + 1;
       const listContainer = document.getElementById('packages-list');
       listContainer.innerHTML = '';
+
       stop.packagesList.forEach((pkg) => {
         const div = document.createElement('div');
         div.className = 'pkg-card';
-        div.innerHTML = `<div><span class="stop-badge">PARADA ${pkg.stopNumber}</span><div style="font-size:14px; font-weight:800; color:#0f172a;">${pkg.code}</div></div><i class="fa-solid fa-barcode" style="font-size:22px; color:#5046e5;"></i>`;
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span class="order-badge">ORDEM ${orderNum}</span>
+              <span class="stop-badge">PARADA ${pkg.stopNumber}</span>
+            </div>
+            <i class="fa-solid fa-barcode" style="font-size:20px; color:#5046e5;"></i>
+          </div>
+          <div style="font-size:14px; font-weight:800; color:#0f172a; margin-top: 2px;">
+            ${pkg.code}
+          </div>
+          <div style="font-size:11px; font-weight:700; color:#374151; text-transform: uppercase; margin-top: 2px;">
+            ${stop.address}
+          </div>
+          <div style="font-size:10px; color:#6b7280;">
+            ${stop.neighborhood}${stop.city ? ' - ' + stop.city : ''}
+          </div>
+        `;
         listContainer.appendChild(div);
       });
+
       toggleModal('pacotes-modal', true);
     }
 
-    /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL */
+    /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL DE PARADAS */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
