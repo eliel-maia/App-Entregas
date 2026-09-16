@@ -73,9 +73,13 @@
 
     /* PAINEL INFERIOR (BOTTOM SHEET) - INFORMAÇÕES DA ENTREGA ATUAL */
     .bottom-sheet {
-      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: white;
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: rgba(255,255,255,0.70);/* Aumentada a transparência (de 85% para 70%) */
+      background: rgba(255, 255, 255, 0.70); /* Aumentada a transparência (de 85% para 70%) */
+      backdrop-filter: blur(16px) saturate(180%); /* Dobrado o desfoque (de 8px para 16px) + realce de cores */
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
       border-top-left-radius: 22px; border-top-right-radius: 22px; padding: 14px 18px 22px 18px;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.18);
+      border-top: 1px solid rgba(255, 255, 255, 0.5); /* Borda sutil de brilho no topo */
     }
 
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
