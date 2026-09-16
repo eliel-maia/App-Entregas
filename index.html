@@ -1,27 +1,32 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <!-- CONFIGURAÇÕES DE CODIFICAÇÃO E VISUALIZAÇÃO MOBILE -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entregas</title>
+  <title>Entr</title>
   
+  <!-- CONFIGURAÇÕES DE PWA (PROGRESSIVE WEB APP) E TEMA -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Entregas">
+  <meta name="apple-mobile-web-app-title" content="Entr">
 
-  <!-- MapLibre GL CSS -->
+  <!-- BIBLIOTECAS EXTERNAS (MAPLIBRE GL E FONT AWESOME) -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
   <style>
+    /* RESET BÁSICO E ESTILOS GERAIS DA TELA */
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 
+    /* LAYOUT PRINCIPAL E CONTÊINER DO MAPA */
     #app-container { position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column; }
     #map { width: 100%; height: 100%; z-index: 1; background: #e5e3df; }
 
+    /* BARRAS DE FERRAMENTAS FLUTUANTES (SUPERIORES) */
     .menu-bar-left {
       position: absolute; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px; flex-direction: column;
     }
@@ -31,6 +36,7 @@
       display: flex; align-items: flex-start; justify-content: flex-end;
     }
 
+    /* BOTÕES FLUTUANTES E BADGES */
     .btn-icon-menu {
       width: 38px; height: 38px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
       border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -51,6 +57,7 @@
       box-shadow: 0 4px 14px rgba(80,70,229,0.3); border: none; cursor: pointer; text-transform: uppercase;
     }
 
+    /* PAINEL DE ESTATÍSTICAS SUPERIOR (TEMPO E ENTREGAS) */
     .stats-card {
       background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
       border-radius: 16px; padding: 6px 12px;
@@ -64,6 +71,7 @@
     .stat-value { font-size: 11px; font-weight: 800; color: #1f2937; margin-top: 1px; }
     .stat-divider { width: 1px; height: 18px; background-color: rgba(229, 231, 235, 0.8); }
 
+    /* PAINEL INFERIOR (BOTTOM SHEET) - INFORMAÇÕES DA ENTREGA ATUAL */
     .bottom-sheet {
       position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: white;
       border-top-left-radius: 22px; border-top-right-radius: 22px; padding: 14px 18px 22px 18px;
@@ -79,7 +87,6 @@
       border: 1.5px solid transparent;
     }
 
-    /* Tag PARADA com fundo e texto em azul (igual à tag ORDEM) e borda laranja */
     .tag-stop-active {
       background: #f0f0ff; color: #5046e5; padding: 5px 11px; border-radius: 12px;
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
@@ -98,6 +105,7 @@
     }
     .address-subtitle { font-size: 11px; color: #6b7280; margin-bottom: 14px; line-height: 1.3; }
 
+    /* BOTÕES DE AÇÃO RÁPIDA (WAZE, FALHA, ENTREGUE) */
     .actions-row { display: flex; gap: 10px; margin-top: 6px; }
     .btn-waze-blue {
       flex: 1; height: 44px; background: #5046e5; color: white; border: none;
@@ -122,6 +130,7 @@
       box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     }
 
+    /* ESTRUTURA DOS MODAIS (LISTA DE PARADAS E DADOS DE PACOTES) */
     .modal {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white;
       z-index: 2000; display: none; flex-direction: column;
@@ -153,6 +162,7 @@
       border-radius: 10px; font-weight: 700; font-size: 11px; margin-bottom: 12px; cursor: pointer; text-align: center; display: block;
     }
 
+    /* ESTILIZAÇÃO DOS MARCADORES DO MAPA (PINOS DE ENTREGA E GPS EM TEMPO REAL) */
     .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; cursor: pointer; }
     .custom-pin {
       position: relative; width: 28px; height: 28px; border-radius: 50%;
@@ -176,6 +186,7 @@
     .custom-pin.failed { background: #ef4444; color: white; }
     .custom-pin.failed::after { border-top-color: #ef4444; }
 
+    /* ANIMAÇÃO DE PULSO PARA LOCALIZAÇÃO ATUAL DO GPS */
     .gps-pin-container { background: transparent; border: none; cursor: pointer; }
     .gps-marker-ring {
       width: 32px; height: 32px; border-radius: 50%;
@@ -194,7 +205,10 @@
 </head>
 <body>
 
+  <!-- CONTÊINER DA APLICAÇÃO -->
   <div id="app-container">
+    
+    <!-- MENU E CONTROLES SUPERIORES (ESQUERDA) -->
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
@@ -203,6 +217,7 @@
       </button>
     </div>
 
+    <!-- CARTOES DE STATUS E CONTADORES (DIREITA) -->
     <div class="top-bar-right">
       <div class="stats-card">
         <div class="stat-item"><span class="stat-label">RESTANTE</span><span class="stat-value" id="time-val">0m</span></div>
@@ -211,13 +226,14 @@
       </div>
     </div>
 
+    <!-- ÁREA DO MAPA INTERATIVO -->
     <div id="map"></div>
 
+    <!-- PAINEL DE INFORMAÇÕES DA PARADA ATUAL -->
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
         <span class="tag-purple-light" id="tag-step">• <span id="current-step-num">1</span> / <span id="total-step-num">1</span></span>
-        <!-- Tags ORDEM e PARADA invertidas de posição -->
         <span class="tag-purple-light" id="tag-order">ORDEM&nbsp;<span id="current-order-num">1</span></span>
         <span class="tag-stop-active" id="tag-stop">PARADA 1</span>
         <button class="tag-packages-btn" onclick="openPackagesModal()">
@@ -231,6 +247,7 @@
       <div class="actions-row" id="actions-container"></div>
     </div>
 
+    <!-- MODAL 1: LISTA COMPLETA DE PARADAS E BOTÃO DE CARREGAR PLANILHA -->
     <div id="paradas-modal" class="modal">
       <div class="modal-header">
         <h3>Lista de Paradas</h3>
@@ -245,6 +262,7 @@
       </div>
     </div>
 
+    <!-- MODAL 2: DETALHES DOS PACOTES DA PARADA SELECIONADA -->
     <div id="pacotes-modal" class="modal">
       <div class="modal-header">
         <div>
@@ -259,11 +277,12 @@
     </div>
   </div>
 
-  <!-- MapLibre GL JS -->
+  <!-- IMPORTAÇÃO DAS LIBs JS (MAPLIBRE GL E SHEETJS PARA EXCEL) -->
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
+    /* REGISTRO DO SERVICE WORKER (SUPORTE PWA / OFFLINE) */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -272,6 +291,7 @@
       });
     }
 
+    /* INSTALAÇÃO DO APP COMO PWA */
     let deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -293,6 +313,7 @@
       }
     }
 
+    /* ESTADO GLOBAL DA APLICAÇÃO */
     let stopsData = [];
     let currentIndex = 0;
     let map;
@@ -300,6 +321,7 @@
     let userMarker = null;
     let userLocation = null;
 
+    /* CÁLCULO DE TEMPO ESTIMADO DE ROTA PENDENTE */
     function calculateRemainingTime() {
       const pendingStopsCount = stopsData.filter(s => s.status === 'pending').length;
       const totalMinutes = pendingStopsCount * 4;
@@ -309,6 +331,7 @@
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
 
+    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL DE PARADAS (VIZINHO MAIS PRÓXIMO) */
     function optimizeRouteSequential() {
       if (stopsData.length <= 1) return;
       let centerLat = stopsData.reduce((s, p) => s + p.lat, 0) / stopsData.length;
@@ -334,6 +357,7 @@
       currentIndex = 0;
     }
 
+    /* INICIALIZAÇÃO E CONFIGURAÇÃO DO MAPA */
     function initMap() {
       map = new maplibregl.Map({
         container: 'map',
@@ -348,6 +372,7 @@
       });
     }
 
+    /* MONITORAMENTO DO GPS DO ENTREGADOR EM TEMPO REAL */
     function startLiveTracking() {
       if ('geolocation' in navigator) {
         navigator.geolocation.watchPosition((position) => {
@@ -376,6 +401,7 @@
       }
     }
 
+    /* CENTRALIZAÇÃO DO MAPA NA POSIÇÃO ATUAL DO DISPOSITIVO */
     function centerOnUserGPS() {
       if (userLocation) {
         map.flyTo({ center: userLocation, zoom: 15 });
@@ -389,6 +415,7 @@
       }
     }
 
+    /* DESENHO DOS PINOS DE ENTREGAS NO MAPA */
     function renderStops(fitMapBounds = false) {
       markers.forEach(m => m.remove());
       markers = [];
@@ -437,6 +464,7 @@
       updateUI();
     }
 
+    /* SELEÇÃO DE PARADA E REPOSICIONAMENTO DA CÂMERA */
     function selectStop(index) {
       if (stopsData.length === 0) return;
       currentIndex = index;
@@ -447,6 +475,7 @@
       renderStops(false);
     }
 
+    /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -503,6 +532,7 @@
       }
     }
 
+    /* ATUALIZAÇÃO DA INTERFACE VISUAL (PAINÉIS E BOTÕES) */
     function updateUI() {
       const tagsRow = document.getElementById('tags-row');
       const actionsContainer = document.getElementById('actions-container');
@@ -559,6 +589,7 @@
       renderList();
     }
 
+    /* CONTROLE DE EXIBIÇÃO DE MODAIS */
     function toggleModal(modalId, show) {
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
@@ -579,6 +610,7 @@
       toggleModal('pacotes-modal', true);
     }
 
+    /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
@@ -636,6 +668,7 @@
       });
     }
 
+    /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL */
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -684,6 +717,7 @@
       reader.readAsArrayBuffer(file);
     }
 
+    /* INICIALIZADOR AO CARREGAR A PÁGINA */
     window.onload = initMap;
   </script>
 </body>
