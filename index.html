@@ -85,7 +85,7 @@
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
     .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     
-    /* CONTADOR DE PARADAS (BOLINHA AZUL + TEXTO PRETO SEM FUNDO) */
+    /* CONTADOR DE PARADAS */
     .step-counter-indicator {
       display: inline-flex;
       align-items: center;
@@ -107,14 +107,13 @@
       display: inline-block;
     }
 
-    /* TAGS AZUIS */
+    /* TAGS AZUIS E LARANJAS */
     .tag-blue { 
       background: #eeefff; color: #5046e5; padding: 6px 12px; border-radius: 12px; 
       font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
       border: none;
     }
 
-    /* TAG DE PACOTES LARANJA */
     .tag-packages-btn {
       background: #fff2ec; color: #ff5500; padding: 6px 12px; 
       border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; display: inline-flex;
@@ -127,7 +126,7 @@
     }
     .address-subtitle { font-size: 11px; color: #6b7280; margin-bottom: 14px; line-height: 1.3; }
 
-    /* BOTÕES DE AÇÃO RÁPIDA (WAZE, FALHA, ENTREGUE) */
+    /* BOTÕES DE AÇÃO RÁPIDA */
     .actions-row { display: flex; gap: 10px; margin-top: 6px; }
     .btn-waze-blue {
       flex: 1; height: 44px; background: #5046e5; color: white; border: none;
@@ -152,7 +151,7 @@
       box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     }
 
-    /* ESTRUTURA DOS MODAIS (LISTA DE PARADAS E DADOS DE PACOTES) */
+    /* ESTRUTURA DOS MODAIS */
     .modal {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white;
       z-index: 2000; display: none; flex-direction: column;
@@ -297,7 +296,7 @@
     </div>
   </div>
 
-  <!-- IMPORTAÇÃO DAS LIBs JS (MAPLIBRE GL E SHEETJS PARA EXCEL) -->
+  <!-- IMPORTAÇÃO DAS LIBs JS -->
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -376,7 +375,7 @@
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
 
-    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL DE PARADAS (VIZINHO MAIS PRÓXIMO) */
+    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL DE PARADAS */
     function optimizeRouteSequential() {
       if (stopsData.length <= 1) return;
       let centerLat = stopsData.reduce((s, p) => s + p.lat, 0) / stopsData.length;
@@ -418,7 +417,6 @@
         startLiveTracking();
       });
 
-      /* RESTAURAÇÃO DO RENDERIZADOR WEBGL QUANDO VOLTAR DO BACKGROUND */
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && map) {
           setTimeout(() => {
@@ -431,7 +429,7 @@
       });
     }
 
-    /* MONITORAMENTO DO GPS DO ENTREGADOR EM TEMPO REAL */
+    /* MONITORAMENTO DO GPS DO ENTREGADOR */
     function startLiveTracking() {
       if ('geolocation' in navigator) {
         navigator.geolocation.watchPosition((position) => {
@@ -593,7 +591,7 @@
       }
     }
 
-    /* ATUALIZAÇÃO DA INTERFACE VISUAL (PAINÉIS E BOTÕES) */
+    /* ATUALIZAÇÃO DA INTERFACE VISUAL */
     function updateUI() {
       const tagsRow = document.getElementById('tags-row');
       const actionsContainer = document.getElementById('actions-container');
@@ -655,7 +653,7 @@
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
 
-    /* ABRIR MODAL DE PACOTES - EXIBE APENAS A PARADA DE CADA PACOTE */
+    /* ABRIR MODAL DE PACOTES */
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
@@ -699,7 +697,7 @@
       toggleModal('pacotes-modal', true);
     }
 
-    /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL DE PARADAS */
+    /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
@@ -715,11 +713,9 @@
         const numA = parseInt(String(a.originalStop).replace(/[^0-9]/g, '')) || 0;
         const numB = parseInt(String(b.originalStop).replace(/[^0-9]/g, '')) || 0;
 
-        // Se uma tem "+" e a outra não, a com "+" vem primeiro
         if (isPlusA && !isPlusB) return -1;
         if (!isPlusA && isPlusB) return 1;
 
-        // Se ambas são "+" ou ambas são normais, ordena numericamente
         return numA - numB;
       });
 
@@ -762,7 +758,7 @@
       });
     }
 
-    /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL (ATUALIZADO) */
+    /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL (CORRIGIDO PARA UNIFICAR 4 PACOTES) */
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -780,14 +776,19 @@
           
           if (!isNaN(lat) && !isNaN(lng) && lat < 0 && lng < 0) {
             const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `+${index + 1}`;
+            
+            // Padroniza o endereço eliminando espaços duplos
             const fullAddress = String(row['Destination Address'] || '').trim();
+            const normalizedAddress = fullAddress.toLowerCase().replace(/\s+/g, ' ');
 
-            // Chave única: Coordenadas + Endereço Completo em minúsculas
-            const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
+            // CHAVE ÚNICA: Coordenadas arredondadas em 4 casas + Endereço normalizado
+            const key = `POS_${lat.toFixed(4)}_${lng.toFixed(4)}_ADDR_${normalizedAddress}`;
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
             if (stopsMap.has(key)) {
               let existing = stopsMap.get(key);
+              
+              // Incrementa e inclui o pacote no grupo existente (soma os 4 pacotes)
               existing.packagesCount += 1;
               existing.packagesList.push({ 
                 stopNumber: rawStop, 
@@ -797,7 +798,7 @@
               if (!existing.stopsList.includes(rawStop)) {
                 existing.stopsList.push(rawStop);
                 
-                // Reordena priorizando o sinal "+" para definir o rótulo da parada
+                // Reordena colocando qualquer parada iniciada com "+" em primeiro lugar
                 existing.stopsList.sort((a, b) => {
                   const isPlusA = String(a).trim().startsWith('+');
                   const isPlusB = String(b).trim().startsWith('+');
@@ -809,7 +810,7 @@
                   return numA - numB;
                 });
 
-                // Define o primeiro elemento (que prioritariamente é o "+") como rótulo principal
+                // Define a parada principal como o primeiro elemento (dando prioridade ao "+")
                 existing.originalStop = existing.stopsList[0];
               }
             } else {
