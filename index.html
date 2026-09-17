@@ -700,7 +700,6 @@
     }
 
     /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL DE PARADAS */
-    /* CLASSIFICAÇÃO: PARADAS COM "+" PRIMEIRO, SEGUIDAS PELAS DEMAIS PARADAS */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
@@ -713,14 +712,14 @@
       const sortedStops = [...stopsData].sort((a, b) => {
         const isPlusA = String(a.originalStop).trim().startsWith('+');
         const isPlusB = String(b.originalStop).trim().startsWith('+');
-        const numA = parseInt(a.originalStop.replace(/[^0-9]/g, '')) || 0;
-        const numB = parseInt(b.originalStop.replace(/[^0-9]/g, '')) || 0;
+        const numA = parseInt(String(a.originalStop).replace(/[^0-9]/g, '')) || 0;
+        const numB = parseInt(String(b.originalStop).replace(/[^0-9]/g, '')) || 0;
 
-        // Se uma é "+" e a outra não, a com "+" vem primeiro
+        // Se uma tem "+" e a outra não, a com "+" vem primeiro
         if (isPlusA && !isPlusB) return -1;
         if (!isPlusA && isPlusB) return 1;
 
-        // Se ambas são "+" ou ambas são normais, ordena pelo número
+        // Se ambas são "+" ou ambas são normais, ordena numericamente
         return numA - numB;
       });
 
@@ -763,7 +762,7 @@
       });
     }
 
-    /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL */
+    /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL (ATUALIZADO) */
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -785,7 +784,6 @@
 
             // Chave única: Coordenadas + Endereço Completo em minúsculas
             const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
-
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
             if (stopsMap.has(key)) {
@@ -795,9 +793,23 @@
                 stopNumber: rawStop, 
                 code: spxCode 
               });
+              
               if (!existing.stopsList.includes(rawStop)) {
                 existing.stopsList.push(rawStop);
-                existing.stopsList.sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '')) || 0) - (parseInt(b.replace(/[^0-9]/g, '')) || 0));
+                
+                // Reordena priorizando o sinal "+" para definir o rótulo da parada
+                existing.stopsList.sort((a, b) => {
+                  const isPlusA = String(a).trim().startsWith('+');
+                  const isPlusB = String(b).trim().startsWith('+');
+                  if (isPlusA && !isPlusB) return -1;
+                  if (!isPlusA && isPlusB) return 1;
+                  
+                  const numA = parseInt(String(a).replace(/[^0-9]/g, '')) || 0;
+                  const numB = parseInt(String(b).replace(/[^0-9]/g, '')) || 0;
+                  return numA - numB;
+                });
+
+                // Define o primeiro elemento (que prioritariamente é o "+") como rótulo principal
                 existing.originalStop = existing.stopsList[0];
               }
             } else {
