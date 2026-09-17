@@ -778,29 +778,67 @@
         let extraStopCounter = 0;
         const unnumberedAddressMap = new Map();
 
+        // 1. Extrai o nome base da rua sem números ou pontuações
+        function cleanStreetName(addr) {
+          if (!addr) return '';
+          return String(addr)
+            .split(',')[0]
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[0-9]/g, '')
+            .trim()
+            .toLowerCase();
+        }
+
+        // 2. Mapeia endereços da planilha que POSSUEM coordenadas válidas
+        const validCoordsByAddress = new Map();
+        json.forEach(row => {
+          let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
+          let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
+          let lat = parseFloat(rawLat);
+          let lng = parseFloat(rawLng);
+
+          if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
+            const streetName = cleanStreetName(fullAddr);
+            
+            if (!validCoordsByAddress.has(fullAddr)) {
+              validCoordsByAddress.set(fullAddr, { lat, lng });
+            }
+            if (streetName && !validCoordsByAddress.has(streetName)) {
+              validCoordsByAddress.set(streetName, { lat, lng });
+            }
+          }
+        });
+
+        // 3. Processa cada linha e monta as paradas
         json.forEach((row, index) => {
-          // Trata conversão de vírgula para ponto e remove espaços
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
           let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
           
           let lat = parseFloat(rawLat);
           let lng = parseFloat(rawLng);
 
-          // Verifica se a coordenada é válida (diferente de 0 e não NaN)
-          const isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+          let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+          const fullAddress = String(row['Destination Address'] || '').trim();
+          const streetName = cleanStreetName(fullAddress);
 
-          // Se estiver zerada/inválida, atribui uma coordenada temporária para NÃO descartar o pacote
+          // Se estiver sem coordenadas, pesquisa se o mesmo endereço/rua possui coordenada em outro pacote da planilha
           if (!isValidCoords) {
-            lat = -22.2223;
-            lng = -49.6531;
+            const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
+            if (foundCoords) {
+              lat = foundCoords.lat;
+              lng = foundCoords.lng;
+              isValidCoords = true;
+            } else {
+              lat = -22.2223;
+              lng = -49.6531;
+            }
           }
 
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
           const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
 
-          const fullAddress = String(row['Destination Address'] || '').trim();
-          
-          // Define a chave do local: usa o endereço completo se a coordenada original for zerada
           const locationKey = isValidCoords 
             ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`
             : `ADDR_INDEX_${index}_${fullAddress.toLowerCase()}`;
