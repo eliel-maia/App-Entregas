@@ -700,6 +700,7 @@
     }
 
     /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL DE PARADAS */
+    /* CLASSIFICAÇÃO: PARADAS COM "+" PRIMEIRO, SEGUIDAS PELAS DEMAIS PARADAS */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
@@ -710,8 +711,16 @@
       }
 
       const sortedStops = [...stopsData].sort((a, b) => {
-        let numA = parseInt(a.originalStop.replace(/[^0-9]/g, '')) || 0;
-        let numB = parseInt(b.originalStop.replace(/[^0-9]/g, '')) || 0;
+        const isPlusA = String(a.originalStop).trim().startsWith('+');
+        const isPlusB = String(b.originalStop).trim().startsWith('+');
+        const numA = parseInt(a.originalStop.replace(/[^0-9]/g, '')) || 0;
+        const numB = parseInt(b.originalStop.replace(/[^0-9]/g, '')) || 0;
+
+        // Se uma é "+" e a outra não, a com "+" vem primeiro
+        if (isPlusA && !isPlusB) return -1;
+        if (!isPlusA && isPlusB) return 1;
+
+        // Se ambas são "+" ou ambas são normais, ordena pelo número
         return numA - numB;
       });
 
