@@ -763,22 +763,21 @@
       });
     }
 
-    /* NORMALIZAÇÃO DE ENDEREÇO PARA AGRUPAMENTO POR RUA E NÚMERO */
-    function getAddressKey(addressStr, cityStr) {
-      if (!addressStr) return '';
-      let clean = addressStr
+    /* EXTRAÇÃO INTELIGENTE DE RUA E NÚMERO DO IMÓVEL */
+    function extractStreetAndNumber(fullAddress) {
+      if (!fullAddress) return '';
+      let clean = fullAddress
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
-        .replace(/[\.\,\-\_]/g, ' ')
+        .replace(/[\.\,\-\_\/\\]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-      
-      let cityClean = (cityStr || '')
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim();
 
-      return `${clean}_${cityClean}`;
+      let match = clean.match(/(.+?\b\d+\b)/);
+      if (match) {
+        return match[1].trim();
+      }
+      return clean;
     }
 
     /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL */
@@ -802,8 +801,9 @@
             const fullAddress = String(row['Destination Address'] || '').trim();
             const city = String(row['City'] || '').trim();
 
-            // Chave baseada exclusivamente no Endereço + Cidade (Rua e Número da Casa)
-            const key = getAddressKey(fullAddress, city);
+            const streetAndNum = extractStreetAndNumber(fullAddress);
+            const cityClean = city.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            const key = `ADDR_${streetAndNum}_CITY_${cityClean}`;
 
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
@@ -816,7 +816,6 @@
               });
               if (!existing.stopsList.includes(rawStop)) {
                 existing.stopsList.push(rawStop);
-                // Ordena as paradas priorizando números reais e colocando '+' no final para determinar a parada principal
                 existing.stopsList.sort((a, b) => {
                   const isPlusA = a.startsWith('+');
                   const isPlusB = b.startsWith('+');
