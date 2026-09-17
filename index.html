@@ -763,6 +763,24 @@
       });
     }
 
+    /* NORMALIZAÇÃO DE ENDEREÇO PARA AGRUPAMENTO POR RUA E NÚMERO */
+    function getAddressKey(addressStr, cityStr) {
+      if (!addressStr) return '';
+      let clean = addressStr
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[\.\,\-\_]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      let cityClean = (cityStr || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+      return `${clean}_${cityClean}`;
+    }
+
     /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL */
     function handleFileUpload(event) {
       const file = event.target.files[0];
@@ -782,9 +800,10 @@
           if (!isNaN(lat) && !isNaN(lng) && lat < 0 && lng < 0) {
             const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `+${index + 1}`;
             const fullAddress = String(row['Destination Address'] || '').trim();
+            const city = String(row['City'] || '').trim();
 
-            // Chave única: Coordenadas + Endereço Completo em minúsculas
-            const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
+            // Chave baseada exclusivamente no Endereço + Cidade (Rua e Número da Casa)
+            const key = getAddressKey(fullAddress, city);
 
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
@@ -797,7 +816,16 @@
               });
               if (!existing.stopsList.includes(rawStop)) {
                 existing.stopsList.push(rawStop);
-                existing.stopsList.sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '')) || 0) - (parseInt(b.replace(/[^0-9]/g, '')) || 0));
+                // Ordena as paradas priorizando números reais e colocando '+' no final para determinar a parada principal
+                existing.stopsList.sort((a, b) => {
+                  const isPlusA = a.startsWith('+');
+                  const isPlusB = b.startsWith('+');
+                  if (isPlusA && !isPlusB) return 1;
+                  if (!isPlusA && isPlusB) return -1;
+                  const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+                  const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+                  return numA - numB;
+                });
                 existing.originalStop = existing.stopsList[0];
               }
             } else {
@@ -807,7 +835,7 @@
                 stopsList: [rawStop],
                 address: fullAddress || 'Endereço', 
                 neighborhood: row['Bairro'] || '', 
-                city: row['City'] || '',
+                city: city,
                 packagesCount: 1, 
                 packagesList: [{ 
                   stopNumber: rawStop, 
