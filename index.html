@@ -779,67 +779,82 @@
         const unnumberedAddressMap = new Map();
 
         json.forEach((row, index) => {
-          let lat = parseFloat(row['Latitude']);
-          let lng = parseFloat(row['Longitude']);
+          // Trata conversão de vírgula para ponto e remove espaços
+          let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
+          let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
           
-          if (!isNaN(lat) && !isNaN(lng) && lat < 0 && lng < 0) {
-            const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
-            const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
+          let lat = parseFloat(rawLat);
+          let lng = parseFloat(rawLng);
 
-            const fullAddress = String(row['Destination Address'] || '').trim();
-            const locationKey = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
+          // Verifica se a coordenada é válida (diferente de 0 e não NaN)
+          const isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
-            let rawStop = '';
+          // Se estiver zerada/inválida, atribui uma coordenada temporária para NÃO descartar o pacote
+          if (!isValidCoords) {
+            lat = -22.2223;
+            lng = -49.6531;
+          }
 
-            if (isNumbered) {
-              rawStop = rawStopVal;
+          const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
+          const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
+
+          const fullAddress = String(row['Destination Address'] || '').trim();
+          
+          // Define a chave do local: usa o endereço completo se a coordenada original for zerada
+          const locationKey = isValidCoords 
+            ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`
+            : `ADDR_INDEX_${index}_${fullAddress.toLowerCase()}`;
+
+          let rawStop = '';
+
+          if (isNumbered) {
+            rawStop = rawStopVal;
+          } else {
+            if (unnumberedAddressMap.has(locationKey)) {
+              rawStop = unnumberedAddressMap.get(locationKey);
             } else {
-              if (unnumberedAddressMap.has(locationKey)) {
-                rawStop = unnumberedAddressMap.get(locationKey);
-              } else {
-                extraStopCounter++;
-                rawStop = `+${extraStopCounter}`;
-                unnumberedAddressMap.set(locationKey, rawStop);
-              }
+              extraStopCounter++;
+              rawStop = `+${extraStopCounter}`;
+              unnumberedAddressMap.set(locationKey, rawStop);
             }
+          }
 
-            const key = locationKey;
-            const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
+          const key = locationKey;
+          const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
-            if (stopsMap.has(key)) {
-              let existing = stopsMap.get(key);
-              existing.packagesCount += 1;
-              existing.packagesList.push({ 
+          if (stopsMap.has(key)) {
+            let existing = stopsMap.get(key);
+            existing.packagesCount += 1;
+            existing.packagesList.push({ 
+              stopNumber: rawStop, 
+              code: spxCode 
+            });
+            if (!existing.stopsList.includes(rawStop)) {
+              existing.stopsList.push(rawStop);
+              existing.stopsList.sort((a, b) => {
+                const numA = parseInt(String(a).replace(/[^0-9]/g, '')) || 0;
+                const numB = parseInt(String(b).replace(/[^0-9]/g, '')) || 0;
+                return numA - numB;
+              });
+              existing.originalStop = existing.stopsList[0];
+            }
+          } else {
+            stopsMap.set(key, {
+              id: key, 
+              originalStop: rawStop, 
+              stopsList: [rawStop],
+              address: fullAddress || 'Endereço sem nome', 
+              neighborhood: row['Bairro'] || '', 
+              city: row['City'] || '',
+              packagesCount: 1, 
+              packagesList: [{ 
                 stopNumber: rawStop, 
                 code: spxCode 
-              });
-              if (!existing.stopsList.includes(rawStop)) {
-                existing.stopsList.push(rawStop);
-                existing.stopsList.sort((a, b) => {
-                  const numA = parseInt(String(a).replace(/[^0-9]/g, '')) || 0;
-                  const numB = parseInt(String(b).replace(/[^0-9]/g, '')) || 0;
-                  return numA - numB;
-                });
-                existing.originalStop = existing.stopsList[0];
-              }
-            } else {
-              stopsMap.set(key, {
-                id: key, 
-                originalStop: rawStop, 
-                stopsList: [rawStop],
-                address: fullAddress || 'Endereço', 
-                neighborhood: row['Bairro'] || '', 
-                city: row['City'] || '',
-                packagesCount: 1, 
-                packagesList: [{ 
-                  stopNumber: rawStop, 
-                  code: spxCode 
-                }], 
-                lat: lat, 
-                lng: lng, 
-                status: 'pending'
-              });
-            }
+              }], 
+              lat: lat, 
+              lng: lng, 
+              status: 'pending'
+            });
           }
         });
 
@@ -850,7 +865,7 @@
           renderStops(true);
           toggleModal('paradas-modal', false);
         } else {
-          alert("Não foram encontradas coordenadas válidas na planilha.");
+          alert("Nenhum registro encontrado na planilha.");
         }
       };
       reader.readAsArrayBuffer(file);
