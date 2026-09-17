@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -714,8 +713,8 @@
       const sortedStops = [...stopsData].sort((a, b) => {
         const isPlusA = String(a.originalStop).trim().startsWith('+');
         const isPlusB = String(b.originalStop).trim().startsWith('+');
-        const numA = parseInt(a.originalStop.replace(/[^0-9]/g, '')) || 0;
-        const numB = parseInt(b.originalStop.replace(/[^0-9]/g, '')) || 0;
+        const numA = parseInt(String(a.originalStop).replace(/[^0-9]/g, '')) || 0;
+        const numB = parseInt(String(b.originalStop).replace(/[^0-9]/g, '')) || 0;
 
         // Se uma é "+" e a outra não, a com "+" vem primeiro
         if (isPlusA && !isPlusB) return -1;
@@ -775,18 +774,36 @@
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
         const stopsMap = new Map();
+        
+        let extraStopCounter = 0;
+        const unnumberedAddressMap = new Map();
 
         json.forEach((row, index) => {
           let lat = parseFloat(row['Latitude']);
           let lng = parseFloat(row['Longitude']);
           
           if (!isNaN(lat) && !isNaN(lng) && lat < 0 && lng < 0) {
-            const rawStop = (row['Stop'] && String(row['Stop']).trim() !== '-') ? String(row['Stop']).trim() : `+${index + 1}`;
+            const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
+            const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
+
             const fullAddress = String(row['Destination Address'] || '').trim();
+            const locationKey = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
 
-            // Chave única: Coordenadas + Endereço Completo em minúsculas
-            const key = `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`;
+            let rawStop = '';
 
+            if (isNumbered) {
+              rawStop = rawStopVal;
+            } else {
+              if (unnumberedAddressMap.has(locationKey)) {
+                rawStop = unnumberedAddressMap.get(locationKey);
+              } else {
+                extraStopCounter++;
+                rawStop = `+${extraStopCounter}`;
+                unnumberedAddressMap.set(locationKey, rawStop);
+              }
+            }
+
+            const key = locationKey;
             const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
             if (stopsMap.has(key)) {
@@ -798,7 +815,11 @@
               });
               if (!existing.stopsList.includes(rawStop)) {
                 existing.stopsList.push(rawStop);
-                existing.stopsList.sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '')) || 0) - (parseInt(b.replace(/[^0-9]/g, '')) || 0));
+                existing.stopsList.sort((a, b) => {
+                  const numA = parseInt(String(a).replace(/[^0-9]/g, '')) || 0;
+                  const numB = parseInt(String(b).replace(/[^0-9]/g, '')) || 0;
+                  return numA - numB;
+                });
                 existing.originalStop = existing.stopsList[0];
               }
             } else {
