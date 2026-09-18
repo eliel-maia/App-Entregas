@@ -554,7 +554,7 @@
     }
 
     /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
-    /* REGRA: AVANÇA NA MESMA RUA ATÉ NO MÁXIMO 100 METROS (~2 QUARTEIRÕES), CASO CONTRÁRIO PULA PARA A MAIS PRÓXIMA */
+    /* REGRA: AVANÇA NA MESMA RUA ATÉ NO MÁXIMO 70 METROS, CASO CONTRÁRIO PULA PARA A MAIS PRÓXIMA */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -572,23 +572,23 @@
 
       const currentStreet = extractStreetName(currentStop.address);
 
-      // Filtra paradas pendentes da mesma rua que estejam dentro de 100 metros (~2 quarteirões)
+      // Filtra paradas pendentes da mesma rua que estejam dentro de 70 metros
       let sameStreetNearby = stopsData
         .map((s, idx) => {
           const isSameStreet = extractStreetName(s.address) === currentStreet;
           const distMeters = calculateDistanceInMeters(currentStop.lat, currentStop.lng, s.lat, s.lng);
           return { stop: s, index: idx, distMeters, isSameStreet };
         })
-        .filter(item => item.stop.status === 'pending' && item.isSameStreet && item.distMeters <= 100);
+        .filter(item => item.stop.status === 'pending' && item.isSameStreet && item.distMeters <= 70);
 
       let nextIndex = -1;
 
       if (sameStreetNearby.length > 0) {
-        // Pega a mais próxima da mesma rua que esteja a até 100 metros
+        // Pega a mais próxima da mesma rua que esteja a até 70 metros
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        // Se não houver paradas a até 100m na mesma rua, pula para a parada pendente mais próxima de qualquer lugar
+        // Se não houver paradas a até 70m na mesma rua, pula para a parada pendente mais próxima de qualquer lugar
         let allPending = stopsData
           .map((s, idx) => ({
             stop: s,
