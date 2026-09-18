@@ -233,7 +233,6 @@
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
-      <!-- BOTÃO PARA IR PARA A PARADA MAIS PRÓXIMA DE ONDE VOCÊ ESTÁ -->
       <button class="btn-icon-menu" onclick="selectNearestStopFromGPS()" title="Ir para a parada mais próxima" style="color: #5046e5;"><i class="fa-solid fa-route"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
         <i class="fa-solid fa-download"></i> Instalar
@@ -343,12 +342,18 @@
     let markers = [];
     let userMarker = null;
     let userLocation = null;
+    let routeStartTime = null;
 
     /* GERENCIAMENTO DE PERSISTÊNCIA LOCAL (LOCALSTORAGE) */
     function saveDataToStorage() {
       try {
         localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
         localStorage.setItem('delivery_current_index', currentIndex.toString());
+        if (routeStartTime) {
+          localStorage.setItem('delivery_route_start_time', routeStartTime.toString());
+        } else {
+          localStorage.removeItem('delivery_route_start_time');
+        }
       } catch (e) {
         console.error("Erro ao salvar no storage:", e);
       }
@@ -358,9 +363,11 @@
       try {
         const savedStops = localStorage.getItem('delivery_stops_data');
         const savedIndex = localStorage.getItem('delivery_current_index');
+        const savedStart = localStorage.getItem('delivery_route_start_time');
         if (savedStops) {
           stopsData = JSON.parse(savedStops);
           currentIndex = savedIndex ? parseInt(savedIndex, 10) : 0;
+          routeStartTime = savedStart ? parseInt(savedStart, 10) : null;
           return true;
         }
       } catch (e) {
@@ -411,6 +418,21 @@
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    }
+
+    /* FORMATAR MILISSEGUNDOS EM TEXTO DE TEMPO DECORRIDO */
+    function formatElapsedTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      let parts = [];
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0 || hours > 0) parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+
+      return parts.join(' ');
     }
 
     /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL */
@@ -666,6 +688,12 @@
     /* REGISTRO DE STATUS E SEQUENCIAMENTO */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
+
+      // ATIVA O CRONÔMETRO APENAS AO FINALIZAR A PRIMEIRA PARADA (ENTREGUE OU FALHA)
+      if (!routeStartTime) {
+        routeStartTime = Date.now();
+      }
+
       const currentStop = stopsData[currentIndex];
       currentStop.status = status;
 
@@ -701,13 +729,27 @@
         }
       }
 
-      if (nextIndex !== -1) currentIndex = nextIndex;
+      if (nextIndex !== -1) {
+        currentIndex = nextIndex;
+      }
+
       saveDataToStorage();
       renderStops(false);
-      
-      const activeStop = stopsData[currentIndex];
-      if (activeStop && !isNaN(activeStop.lat) && map) {
-        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
+
+      // VERIFICA SE TODAS AS ENTREGAS FORAM FINALIZADAS
+      const remainingPending = stopsData.filter(s => s.status === 'pending').length;
+      if (remainingPending === 0) {
+        const totalDurationMs = Date.now() - (routeStartTime || Date.now());
+        const durationFormatted = formatElapsedTime(totalDurationMs);
+        
+        setTimeout(() => {
+          alert(`🎉 ROTA CONCLUÍDA COM SUCESSO!\n\n⏱️ Tempo total gasto: ${durationFormatted}`);
+        }, 200);
+      } else {
+        const activeStop = stopsData[currentIndex];
+        if (activeStop && !isNaN(activeStop.lat) && map) {
+          map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
+        }
       }
     }
 
@@ -733,6 +775,27 @@
         return;
       }
 
+      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
+      const totalCount = stopsData.length;
+
+      // SE TODAS AS PARADAS FORAM CONCLUÍDAS
+      if (completedCount === totalCount) {
+        tagsRow.style.setProperty('display', 'none', 'important');
+        const elapsedFormatted = routeStartTime ? formatElapsedTime(Date.now() - routeStartTime) : '0s';
+        
+        document.getElementById('time-val').innerText = '0m';
+        document.getElementById('address-title').innerText = '🎉 ROTA FINALIZADA!';
+        document.getElementById('address-subtitle').innerText = `Tempo total percorrido: ${elapsedFormatted}`;
+        
+        actionsContainer.innerHTML = `
+          <button class="btn-start-route" style="flex:1;" onclick="toggleModal('paradas-modal', true)">
+            <i class="fa-solid fa-flag-checkered"></i> VER RESUMO DA ROTA
+          </button>
+        `;
+        renderList();
+        return;
+      }
+
       tagsRow.style.setProperty('display', 'flex', 'important');
       const stop = stopsData[currentIndex] || stopsData[0];
       let totalPkgs = 0, deliveredPkgs = 0;
@@ -745,17 +808,7 @@
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
 
-      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
-      const totalCount = stopsData.length;
-
-      let currentStepDisplay;
-      if (completedCount === totalCount) {
-        currentStepDisplay = totalCount;
-      } else {
-        currentStepDisplay = currentIndex + 1;
-      }
-
-      document.getElementById('current-step-num').innerText = currentStepDisplay;
+      document.getElementById('current-step-num').innerText = currentIndex + 1;
       document.getElementById('total-step-num').innerText = totalCount;
       
       document.getElementById('tag-stop').innerHTML = `PARADA&nbsp;${stop.originalStop}`;
@@ -1006,11 +1059,11 @@
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
           stopsData = newStops;
+          routeStartTime = null; // Reseta o cronômetro para iniciar apenas na 1ª entrega
           optimizeRouteSequential();
           renderStops(true);
           toggleModal('paradas-modal', false);
 
-          // SELECIONA AUTOMATICAMENTE A PARADA MAIS PRÓXIMA DA POSIÇÃO DO GPS AO CARREGAR A PLANILHA
           selectNearestStopFromGPS();
         } else {
           alert("Nenhum registro encontrado na planilha.");
