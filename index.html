@@ -127,7 +127,7 @@
     }
     .address-subtitle { font-size: 11px; color: #6b7280; margin-bottom: 14px; line-height: 1.3; }
 
-    /* BOTÕES DE AÇÃO RÁPIDA (WAZE, FALHA, ENTREGUE) COM SOMBRAS ATUALIZADAS */
+    /* BOTÕES DE AÇÃO RÁPIDA (WAZE, FALHA, ENTREGUE) */
     .actions-row { display: flex; gap: 10px; margin-top: 6px; }
     .btn-waze-blue {
       flex: 1; height: 44px; background: #5046e5; color: white; border: none;
@@ -142,7 +142,7 @@
       box-shadow: 0 4px 12px rgba(80, 70, 229, 0.3);
     }
     .btn-fail {
-      flex: 1; height: 44px; background: #f1f5f9; color: #ef4444; border: none;
+      flex: 1; height: 44px; background: #f1f5f9; color: #dc2626; border: none;
       border-radius: 22px; font-weight: 700; font-size: 10px; display: flex;
       flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
       box-shadow: 0 4px 10px rgba(220, 38, 38, 0.08);
@@ -368,6 +368,19 @@
       return false;
     }
 
+    /* CÁLCULO DE DISTÂNCIA REAL EM METROS (FÓRMULA DE HAVERSINE) */
+    function calculateDistanceInMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // Raio da Terra em metros
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
     /* CÁLCULO DE TEMPO ESTIMADO DE ROTA PENDENTE */
     function calculateRemainingTime() {
       const pendingStopsCount = stopsData.filter(s => s.status === 'pending').length;
@@ -538,6 +551,7 @@
     }
 
     /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
+    /* REGRA: AVANÇA NA MESMA RUA ATÉ NO MÁXIMO 100 METROS (~2 QUARTEIRÕES), CASO CONTRÁRIO PULA PARA A MAIS PRÓXIMA */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -555,30 +569,33 @@
 
       const currentStreet = extractStreetName(currentStop.address);
 
-      let sameStreetPending = stopsData
-        .map((s, idx) => ({ stop: s, index: idx }))
-        .filter(item => item.stop.status === 'pending' && extractStreetName(item.stop.address) === currentStreet);
+      // Filtra paradas pendentes da mesma rua que estejam dentro de 100 metros (~2 quarteirões)
+      let sameStreetNearby = stopsData
+        .map((s, idx) => {
+          const isSameStreet = extractStreetName(s.address) === currentStreet;
+          const distMeters = calculateDistanceInMeters(currentStop.lat, currentStop.lng, s.lat, s.lng);
+          return { stop: s, index: idx, distMeters, isSameStreet };
+        })
+        .filter(item => item.stop.status === 'pending' && item.isSameStreet && item.distMeters <= 100);
 
       let nextIndex = -1;
 
-      if (sameStreetPending.length > 0) {
-        sameStreetPending.sort((a, b) => {
-          let distA = Math.hypot(currentStop.lat - a.stop.lat, currentStop.lng - a.stop.lng);
-          let distB = Math.hypot(currentStop.lat - b.stop.lat, currentStop.lng - b.stop.lng);
-          return distA - distB;
-        });
-        nextIndex = sameStreetPending[0].index;
+      if (sameStreetNearby.length > 0) {
+        // Pega a mais próxima da mesma rua que esteja a até 100 metros
+        sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
+        nextIndex = sameStreetNearby[0].index;
       } else {
+        // Se não houver paradas a até 100m na mesma rua, pula para a parada pendente mais próxima de qualquer lugar
         let allPending = stopsData
-          .map((s, idx) => ({ stop: s, index: idx }))
+          .map((s, idx) => ({
+            stop: s,
+            index: idx,
+            distMeters: calculateDistanceInMeters(currentStop.lat, currentStop.lng, s.lat, s.lng)
+          }))
           .filter(item => item.stop.status === 'pending');
 
         if (allPending.length > 0) {
-          allPending.sort((a, b) => {
-            let distA = Math.hypot(currentStop.lat - a.stop.lat, currentStop.lng - a.stop.lng);
-            let distB = Math.hypot(currentStop.lat - b.stop.lat, currentStop.lng - b.stop.lng);
-            return distA - distB;
-          });
+          allPending.sort((a, b) => a.distMeters - b.distMeters);
           nextIndex = allPending[0].index;
         } else {
           nextIndex = stopsData.findIndex(s => s.status === 'pending');
