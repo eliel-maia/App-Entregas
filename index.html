@@ -140,6 +140,7 @@
       border-radius: 22px; font-weight: 700; font-size: 13px; display: flex;
       align-items: center; justify-content: center; gap: 6px; cursor: pointer;
       box-shadow: 0 4px 12px rgba(80, 70, 229, 0.3);
+      text-transform: uppercase;
     }
     .btn-fail {
       flex: 1; height: 44px; background: #f1f5f9; color: #dc2626; border: none;
@@ -251,7 +252,7 @@
     <!-- ÁREA DO MAPA INTERATIVO -->
     <div id="map"></div>
 
-    <!-- PAINEL DE INFORMAÇÕES DA PARADA ATUAL -->
+    <!-- PAINEL INFERIOR (BOTTOM SHEET) -->
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
@@ -508,7 +509,7 @@
       }
     }
 
-    /* INICIALIZAÇÃO ROBUSTA DO MAPA COM TRATAMENTO DE CONTEXTO WEBGL */
+    /* INICIALIZAÇÃO ROBUSTA DO MAPA */
     function initMap() {
       if (map) {
         try { map.remove(); } catch (e) {}
@@ -527,7 +528,6 @@
         trackResize: true
       });
 
-      // MONITORAMENTO E RECUPERAÇÃO DO CANVAS WEBGL PERDIDO PELO SISTEMA
       setupMapRecovery();
 
       map.on('load', () => {
@@ -537,7 +537,6 @@
       });
     }
 
-    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO */
     function setupMapRecovery() {
       const mapCanvas = map.getCanvas();
 
@@ -555,7 +554,6 @@
       }, false);
     }
 
-    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP */
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         setTimeout(() => {
@@ -689,7 +687,6 @@
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
 
-      // ATIVA O CRONÔMETRO APENAS AO FINALIZAR A PRIMEIRA PARADA (ENTREGUE OU FALHA)
       if (!routeStartTime) {
         routeStartTime = Date.now();
       }
@@ -736,16 +733,8 @@
       saveDataToStorage();
       renderStops(false);
 
-      // VERIFICA SE TODAS AS ENTREGAS FORAM FINALIZADAS
       const remainingPending = stopsData.filter(s => s.status === 'pending').length;
-      if (remainingPending === 0) {
-        const totalDurationMs = Date.now() - (routeStartTime || Date.now());
-        const durationFormatted = formatElapsedTime(totalDurationMs);
-        
-        setTimeout(() => {
-          alert(`🎉 ROTA CONCLUÍDA COM SUCESSO!\n\n⏱️ Tempo total gasto: ${durationFormatted}`);
-        }, 200);
-      } else {
+      if (remainingPending > 0) {
         const activeStop = stopsData[currentIndex];
         if (activeStop && !isNaN(activeStop.lat) && map) {
           map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
@@ -778,7 +767,7 @@
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
-      // SE TODAS AS PARADAS FORAM CONCLUÍDAS
+      // EXIBIÇÃO AO CONCLUIR A ROTA (IGUAL AO PRINT)
       if (completedCount === totalCount) {
         tagsRow.style.setProperty('display', 'none', 'important');
         const elapsedFormatted = routeStartTime ? formatElapsedTime(Date.now() - routeStartTime) : '0s';
@@ -787,10 +776,11 @@
         document.getElementById('address-title').innerText = '🎉 ROTA FINALIZADA!';
         document.getElementById('address-subtitle').innerText = `Tempo total percorrido: ${elapsedFormatted}`;
         
+        // BOTÃO CARREGAR PLANILHA DIRETAMENTE NO MENU INFERIOR
         actionsContainer.innerHTML = `
-          <button class="btn-start-route" style="flex:1;" onclick="toggleModal('paradas-modal', true)">
-            <i class="fa-solid fa-flag-checkered"></i> VER RESUMO DA ROTA
-          </button>
+          <label for="excel-upload" class="btn-start-route" style="flex:1; margin:0; cursor:pointer;">
+            <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA
+          </label>
         `;
         renderList();
         return;
@@ -1059,7 +1049,7 @@
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
           stopsData = newStops;
-          routeStartTime = null; // Reseta o cronômetro para iniciar apenas na 1ª entrega
+          routeStartTime = null;
           optimizeRouteSequential();
           renderStops(true);
           toggleModal('paradas-modal', false);
