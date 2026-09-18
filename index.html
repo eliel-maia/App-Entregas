@@ -368,17 +368,20 @@
       return false;
     }
 
-    /* CÁLCULO DE DISTÂNCIA REAL EM METROS (FÓRMULA DE HAVERSINE) */
+    /* CÁLCULO DE DISTÂNCIA DE ALTA PRECISÃO PARA ÁREAS URBANAS (EM METROS) */
     function calculateDistanceInMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371000; // Raio da Terra em metros
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
+      const R = 6371000; // Raio médio da Terra em metros
+      const rad = Math.PI / 180;
+      
+      const dLat = (lat2 - lat1) * rad;
+      const dLon = (lon2 - lon1) * rad;
+      const meanLat = ((lat1 + lat2) / 2) * rad;
+
+      // Ajusta a variação da longitude pela latitude local
+      const x = dLon * Math.cos(meanLat);
+      const y = dLat;
+
+      return Math.sqrt(x * x + y * y) * R;
     }
 
     /* CÁLCULO DE TEMPO ESTIMADO DE ROTA PENDENTE */
@@ -398,7 +401,7 @@
       let centerLng = stopsData.reduce((s, p) => s + p.lng, 0) / stopsData.length;
       let startIdx = 0, maxDist = -1;
       stopsData.forEach((p, idx) => {
-        let d = Math.hypot(p.lat - centerLat, p.lng - centerLng);
+        let d = calculateDistanceInMeters(p.lat, p.lng, centerLat, centerLng);
         if (d > maxDist) { maxDist = d; startIdx = idx; }
       });
       let unvisited = [...stopsData];
@@ -407,7 +410,7 @@
       while (unvisited.length > 0) {
         let bestIdx = 0, minCost = Infinity;
         for (let i = 0; i < unvisited.length; i++) {
-          let dist = Math.hypot(current.lat - unvisited[i].lat, current.lng - unvisited[i].lng);
+          let dist = calculateDistanceInMeters(current.lat, current.lng, unvisited[i].lat, unvisited[i].lng);
           if (dist < minCost) { minCost = dist; bestIdx = i; }
         }
         current = unvisited.splice(bestIdx, 1)[0];
