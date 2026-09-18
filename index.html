@@ -554,7 +554,7 @@
     }
 
     /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
-    /* LOGICA COMBINADA: RUA (70M) -> BLOCO/QUARTEIRÃO (120M) -> PROXIMIDADE GERAL */
+    /* LOGICA COMBINADA: RUA (70M) -> BLOCO/QUARTEIRÃO (200M) -> PROXIMIDADE GERAL */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -590,8 +590,8 @@
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        // 2. Prioridade: Quarteirão/Bloco Urbano Próximo (raio de 120 metros)
-        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 120);
+        // 2. Prioridade: Quarteirão/Bloco Urbano Próximo (raio de 200 metros)
+        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 200);
 
         if (blockNearby.length > 0) {
           blockNearby.sort((a, b) => a.distMeters - b.distMeters);
