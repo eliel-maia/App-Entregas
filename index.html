@@ -367,19 +367,21 @@
       return false;
     }
 
-    /* NORMALIZAÇÃO COMPLETA DE ENDEREÇO PARA AGRUPAR PARADAS IDÊNTICAS */
-    function normalizeAddressKey(fullAddress) {
-      if (!fullAddress) return '';
-      return fullAddress
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/g, ' ')   // Remove caracteres especiais/pontuações
-        .replace(/\s+/g, ' ')           // Remove espaços múltiplos
-        .trim();
+    /* EXTRAI O NÚMERO DA CASA/IMÓVEL DE UM ENDEREÇO */
+    function extractHouseNumber(address) {
+      if (!address) return '';
+      // Tenta capturar o número isolado após uma vírgula, hífen ou espaço
+      const match = address.match(/(?:,|\s|-)\s*(\d+)\b/);
+      return match ? match[1] : '';
     }
 
-    /* EXTRAÇÃO E NORMALIZAÇÃO DE LOGRADOURO */
+    /* NORMALIZAÇÃO BASICA DE COMPLEMENTO/TEXTO */
+    function normalizeText(text) {
+      if (!text) return '';
+      return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    /* EXTRAÇÃO DE NOME DE RUA PARA NAVEGAÇÃO */
     function extractStreetName(fullAddress) {
       if (!fullAddress) return '';
       let base = fullAddress.split(',')[0].split('-')[0];
@@ -640,7 +642,7 @@
 
       let nextIndex = -1;
 
-      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 250);
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 100);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
@@ -850,30 +852,6 @@
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
         const stopsMap = new Map();
-        
-        let extraStopCounter = 0;
-        const unnumberedAddressMap = new Map();
-
-        const validCoordsByAddress = new Map();
-        json.forEach(row => {
-          let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
-          let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
-          let lat = parseFloat(rawLat);
-          let lng = parseFloat(rawLng);
-
-          if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            const fullAddr = String(row['Destination Address'] || '').trim();
-            const normalizedAddr = normalizeAddressKey(fullAddr);
-            const streetName = extractStreetName(fullAddr);
-            
-            if (normalizedAddr && !validCoordsByAddress.has(normalizedAddr)) {
-              validCoordsByAddress.set(normalizedAddr, { lat, lng });
-            }
-            if (streetName && !validCoordsByAddress.has(streetName)) {
-              validCoordsByAddress.set(streetName, { lat, lng });
-            }
-          }
-        });
 
         json.forEach((row, index) => {
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
@@ -884,77 +862,46 @@
 
           let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           const fullAddress = String(row['Destination Address'] || '').trim();
-          const normalizedAddress = normalizeAddressKey(fullAddress);
-          const streetName = extractStreetName(fullAddress);
+          const houseNum = extractHouseNumber(fullAddress);
 
-          if (!isValidCoords) {
-            const foundCoords = validCoordsByAddress.get(normalizedAddress) || validCoordsByAddress.get(streetName);
-            if (foundCoords) {
-              lat = foundCoords.lat;
-              lng = foundCoords.lng;
-              isValidCoords = true;
-            } else {
-              lat = -22.2223;
-              lng = -49.6531;
-            }
+          // CHAVE DE AGRUPAMENTO BASEADA EM GPS + NÚMERO DA CASA
+          // Ignora completamente o texto do nome da rua se o GPS for próximo e o número for igual.
+          let key = '';
+          if (isValidCoords) {
+            key = `GEO_${lat.toFixed(4)}_${lng.toFixed(4)}_NUM_${houseNum}`;
+          } else {
+            key = `TXT_${normalizeText(fullAddress)}`;
           }
 
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
-          const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
-
-          // Chave de agrupamento normalizada para unir endereços idênticos formatados diferente
-          const locationKey = isValidCoords 
-            ? `POS_${lat.toFixed(4)}_${lng.toFixed(4)}_ADDR_${normalizedAddress}`
-            : `ADDR_${normalizedAddress}`;
-
-          let rawStop = '';
-
-          if (isNumbered) {
-            rawStop = rawStopVal;
-          } else {
-            if (unnumberedAddressMap.has(locationKey)) {
-              rawStop = unnumberedAddressMap.get(locationKey);
-            } else {
-              extraStopCounter++;
-              rawStop = `+${extraStopCounter}`;
-              unnumberedAddressMap.set(locationKey, rawStop);
-            }
-          }
-
-          const key = locationKey;
           const spxCode = row['SPX TN'] || `VOL-${index + 1}`;
 
           if (stopsMap.has(key)) {
             let existing = stopsMap.get(key);
             existing.packagesCount += 1;
             existing.packagesList.push({ 
-              stopNumber: rawStop, 
+              stopNumber: rawStopVal || existing.originalStop, 
               code: spxCode 
             });
-            if (!existing.stopsList.includes(rawStop)) {
-              existing.stopsList.push(rawStop);
-              existing.stopsList.sort((a, b) => {
-                const numA = parseInt(String(a).replace(/[^0-9]/g, '')) || 0;
-                const numB = parseInt(String(b).replace(/[^0-9]/g, '')) || 0;
-                return numA - numB;
-              });
-              existing.originalStop = existing.stopsList[0];
+            // Mantém o endereço mais completo ou mais longo como padrão visual
+            if (fullAddress.length > existing.address.length) {
+              existing.address = fullAddress;
             }
           } else {
             stopsMap.set(key, {
               id: key, 
-              originalStop: rawStop, 
-              stopsList: [rawStop],
+              originalStop: rawStopVal || `${index + 1}`, 
+              stopsList: [rawStopVal || `${index + 1}`],
               address: fullAddress || 'Endereço sem nome', 
               neighborhood: row['Bairro'] || '', 
               city: row['City'] || '',
               packagesCount: 1, 
               packagesList: [{ 
-                stopNumber: rawStop, 
+                stopNumber: rawStopVal || `${index + 1}`, 
                 code: spxCode 
               }], 
-              lat: lat, 
-              lng: lng, 
+              lat: isValidCoords ? lat : -22.2223, 
+              lng: isValidCoords ? lng : -49.6531, 
               status: 'pending'
             });
           }
