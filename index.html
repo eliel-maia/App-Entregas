@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <!-- CONFIGURAÇÕES DE CODIFICAÇÃO E VISUALIZAÇÃO MOBILE -->
@@ -367,6 +367,18 @@
       return false;
     }
 
+    /* NORMALIZAÇÃO COMPLETA DE ENDEREÇO PARA AGRUPAR PARADAS IDÊNTICAS */
+    function normalizeAddressKey(fullAddress) {
+      if (!fullAddress) return '';
+      return fullAddress
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')   // Remove caracteres especiais/pontuações
+        .replace(/\s+/g, ' ')           // Remove espaços múltiplos
+        .trim();
+    }
+
     /* EXTRAÇÃO E NORMALIZAÇÃO DE LOGRADOURO */
     function extractStreetName(fullAddress) {
       if (!fullAddress) return '';
@@ -457,7 +469,6 @@
         trackResize: true
       });
 
-      // MONITORAMENTO E RECUPERAÇÃO DO CANVAS WEBGL PERDIDO PELO SISTEMA
       setupMapRecovery();
 
       map.on('load', () => {
@@ -467,7 +478,6 @@
       });
     }
 
-    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO (SOLUÇÃO PARA O MAPA SUMIR AO MUDAR DE APP) */
     function setupMapRecovery() {
       const mapCanvas = map.getCanvas();
 
@@ -485,7 +495,6 @@
       }, false);
     }
 
-    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP DEPOIS DE LONGO TEMPO EM SEGUNDO PLANO */
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         setTimeout(() => {
@@ -537,7 +546,6 @@
       }
     }
 
-    /* CENTRALIZAÇÃO NA POSIÇÃO ATUAL */
     function centerOnUserGPS() {
       if (!map) return;
       if (userLocation) {
@@ -603,7 +611,6 @@
       updateUI();
     }
 
-    /* SELEÇÃO DE PARADA */
     function selectStop(index) {
       if (stopsData.length === 0) return;
       currentIndex = index;
@@ -615,7 +622,6 @@
       renderStops(false);
     }
 
-    /* REGISTRO DE STATUS E SEQUENCIAMENTO */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -663,7 +669,6 @@
       }
     }
 
-    /* ATUALIZAÇÃO DA INTERFACE VISUAL */
     function updateUI() {
       const tagsRow = document.getElementById('tags-row');
       const actionsContainer = document.getElementById('actions-container');
@@ -697,15 +702,14 @@
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
 
-      // CORREÇÃO DO CONTADOR DE PARADAS (EVITA 91/90 AO CONCLUIR)
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
       let currentStepDisplay;
       if (completedCount === totalCount) {
-        currentStepDisplay = totalCount; // Trava em 90/90 quando todas forem entregues
+        currentStepDisplay = totalCount;
       } else {
-        currentStepDisplay = currentIndex + 1; // Exibe o número da parada ativa
+        currentStepDisplay = currentIndex + 1;
       }
 
       document.getElementById('current-step-num').innerText = currentStepDisplay;
@@ -728,12 +732,10 @@
       renderList();
     }
 
-    /* CONTROLE DE EXIBIÇÃO DE MODAIS */
     function toggleModal(modalId, show) {
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
 
-    /* MODAL DE PACOTES DA PARADA ATUAL */
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
@@ -777,7 +779,6 @@
       toggleModal('pacotes-modal', true);
     }
 
-    /* RENDERIZAÇÃO DA LISTA NO MODAL DE PARADAS */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
@@ -861,11 +862,12 @@
           let lng = parseFloat(rawLng);
 
           if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
+            const fullAddr = String(row['Destination Address'] || '').trim();
+            const normalizedAddr = normalizeAddressKey(fullAddr);
             const streetName = extractStreetName(fullAddr);
             
-            if (!validCoordsByAddress.has(fullAddr)) {
-              validCoordsByAddress.set(fullAddr, { lat, lng });
+            if (normalizedAddr && !validCoordsByAddress.has(normalizedAddr)) {
+              validCoordsByAddress.set(normalizedAddr, { lat, lng });
             }
             if (streetName && !validCoordsByAddress.has(streetName)) {
               validCoordsByAddress.set(streetName, { lat, lng });
@@ -882,10 +884,11 @@
 
           let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           const fullAddress = String(row['Destination Address'] || '').trim();
+          const normalizedAddress = normalizeAddressKey(fullAddress);
           const streetName = extractStreetName(fullAddress);
 
           if (!isValidCoords) {
-            const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
+            const foundCoords = validCoordsByAddress.get(normalizedAddress) || validCoordsByAddress.get(streetName);
             if (foundCoords) {
               lat = foundCoords.lat;
               lng = foundCoords.lng;
@@ -899,9 +902,10 @@
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
           const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
 
+          // Chave de agrupamento normalizada para unir endereços idênticos formatados diferente
           const locationKey = isValidCoords 
-            ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`
-            : `ADDR_INDEX_${index}_${fullAddress.toLowerCase()}`;
+            ? `POS_${lat.toFixed(4)}_${lng.toFixed(4)}_ADDR_${normalizedAddress}`
+            : `ADDR_${normalizedAddress}`;
 
           let rawStop = '';
 
@@ -973,4 +977,4 @@
     window.onload = initMap;
   </script>
 </body>
-  </html>
+</html>
