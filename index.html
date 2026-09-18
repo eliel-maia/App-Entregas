@@ -394,7 +394,7 @@
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
 
-    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL DE PARADAS (VIZINHO MAIS PRÓXIMO) */
+    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL DE PARADAS (BLOCO POR PROXIMIDADE) */
     function optimizeRouteSequential() {
       if (stopsData.length <= 1) return;
       let centerLat = stopsData.reduce((s, p) => s + p.lat, 0) / stopsData.length;
@@ -554,7 +554,7 @@
     }
 
     /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
-    /* REGRA: AVANÇA NA MESMA RUA ATÉ NO MÁXIMO 70 METROS, CASO CONTRÁRIO PULA PARA A MAIS PRÓXIMA */
+    /* LOGICA COMBINADA: RUA (70M) -> BLOCO/QUARTEIRÃO (120M) -> PROXIMIDADE GERAL */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -572,34 +572,34 @@
 
       const currentStreet = extractStreetName(currentStop.address);
 
-      // Filtra paradas pendentes da mesma rua que estejam dentro de 70 metros
-      let sameStreetNearby = stopsData
+      // Mapeia todas as paradas pendentes com suas distâncias exatas
+      let allPendingWithDist = stopsData
         .map((s, idx) => {
           const isSameStreet = extractStreetName(s.address) === currentStreet;
           const distMeters = calculateDistanceInMeters(currentStop.lat, currentStop.lng, s.lat, s.lng);
           return { stop: s, index: idx, distMeters, isSameStreet };
         })
-        .filter(item => item.stop.status === 'pending' && item.isSameStreet && item.distMeters <= 70);
+        .filter(item => item.stop.status === 'pending');
 
       let nextIndex = -1;
 
+      // 1. Prioridade: Mesma rua a até 70 metros
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 70);
+
       if (sameStreetNearby.length > 0) {
-        // Pega a mais próxima da mesma rua que esteja a até 70 metros
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        // Se não houver paradas a até 70m na mesma rua, pula para a parada pendente mais próxima de qualquer lugar
-        let allPending = stopsData
-          .map((s, idx) => ({
-            stop: s,
-            index: idx,
-            distMeters: calculateDistanceInMeters(currentStop.lat, currentStop.lng, s.lat, s.lng)
-          }))
-          .filter(item => item.stop.status === 'pending');
+        // 2. Prioridade: Quarteirão/Bloco Urbano Próximo (raio de 120 metros)
+        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 120);
 
-        if (allPending.length > 0) {
-          allPending.sort((a, b) => a.distMeters - b.distMeters);
-          nextIndex = allPending[0].index;
+        if (blockNearby.length > 0) {
+          blockNearby.sort((a, b) => a.distMeters - b.distMeters);
+          nextIndex = blockNearby[0].index;
+        } else if (allPendingWithDist.length > 0) {
+          // 3. Prioridade: Parada mais próxima em qualquer local
+          allPendingWithDist.sort((a, b) => a.distMeters - b.distMeters);
+          nextIndex = allPendingWithDist[0].index;
         } else {
           nextIndex = stopsData.findIndex(s => s.status === 'pending');
         }
