@@ -184,6 +184,7 @@
     }
 
     /* ESTILIZAÇÃO DOS MARCADORES DO MAPA */
+    .custom-pin-container { position: relative; z-index: 10; }
     .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; cursor: pointer; }
     .custom-pin {
       position: relative; width: 28px; height: 28px; border-radius: 50%;
@@ -200,7 +201,7 @@
       background: #ffffff; color: #ff5500; font-size: 9px; font-weight: 800;
       display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #ff5500; z-index: 10;
     }
-    .custom-pin.active { width: 32px; height: 32px; font-size: 12px; background: #ff5500; color: #ffffff; z-index: 999; }
+    .custom-pin.active { width: 32px; height: 32px; font-size: 12px; background: #ff5500; color: #ffffff; z-index: 1000; }
     .custom-pin.active::after { border-top-color: #ff5500; }
     .custom-pin.done { background: #10b981; color: white; }
     .custom-pin.done::after { border-top-color: #10b981; }
@@ -575,6 +576,8 @@
           
           const el = document.createElement('div');
           el.className = 'custom-pin-container';
+          if (isActive) el.style.zIndex = '1000';
+          
           el.innerHTML = `
             <div class="custom-pin-wrapper">
               <div class="custom-pin ${isActive ? 'active' : ''} ${statusClass}">
@@ -899,9 +902,11 @@
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
           const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
 
+          // AGRUPAMENTO UNIFICADO: Agrupa por coordenadas exatas/próximas caso válidas,
+          // evitando duplicatas por divergências no texto da rua.
           const locationKey = isValidCoords 
-            ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`
-            : `ADDR_INDEX_${index}_${fullAddress.toLowerCase()}`;
+            ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}`
+            : `ADDR_STREET_${streetName || 'UNKNOWN'}_${index}`;
 
           let rawStop = '';
 
