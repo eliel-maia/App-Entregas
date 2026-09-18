@@ -233,6 +233,8 @@
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
+      <!-- BOTÃO PARA IR PARA A PARADA MAIS PRÓXIMA DE ONDE VOCÊ ESTÁ -->
+      <button class="btn-icon-menu" onclick="selectNearestStopFromGPS()" title="Ir para a parada mais próxima" style="color: #5046e5;"><i class="fa-solid fa-route"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
         <i class="fa-solid fa-download"></i> Instalar
       </button>
@@ -438,6 +440,52 @@
       saveDataToStorage();
     }
 
+    /* SELECIONA A PARADA PENDENTE MAIS PRÓXIMA DO GPS DO USUÁRIO */
+    function selectNearestStopFromGPS() {
+      if (stopsData.length === 0) {
+        alert("Nenhuma rota carregada.");
+        return;
+      }
+
+      const findAndSelect = (userLng, userLat) => {
+        let nearestIndex = -1;
+        let minDistance = Infinity;
+
+        stopsData.forEach((stop, index) => {
+          if (stop.status === 'pending' && typeof stop.lat === 'number' && typeof stop.lng === 'number' && !isNaN(stop.lat)) {
+            const dist = calculateDistanceInMeters(userLat, userLng, stop.lat, stop.lng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearestIndex = index;
+            }
+          }
+        });
+
+        if (nearestIndex !== -1) {
+          selectStop(nearestIndex);
+        } else {
+          alert("Todas as entregas já foram concluídas ou nenhuma parada pendente foi encontrada!");
+        }
+      };
+
+      if (userLocation) {
+        findAndSelect(userLocation[0], userLocation[1]);
+      } else if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            userLocation = [position.coords.longitude, position.coords.latitude];
+            findAndSelect(userLocation[0], userLocation[1]);
+          },
+          (error) => {
+            alert("Não foi possível obter sua localização via GPS. Certifique-se de que a localização está ativada no seu dispositivo.");
+          },
+          { enableHighAccuracy: true }
+        );
+      } else {
+        alert("Geolocalização não é suportada neste navegador.");
+      }
+    }
+
     /* INICIALIZAÇÃO ROBUSTA DO MAPA COM TRATAMENTO DE CONTEXTO WEBGL */
     function initMap() {
       if (map) {
@@ -467,7 +515,7 @@
       });
     }
 
-    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO (SOLUÇÃO PARA O MAPA SUMIR AO MUDAR DE APP) */
+    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO */
     function setupMapRecovery() {
       const mapCanvas = map.getCanvas();
 
@@ -485,7 +533,7 @@
       }, false);
     }
 
-    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP DEPOIS DE LONGO TEMPO EM SEGUNDO PLANO */
+    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP */
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         setTimeout(() => {
@@ -697,15 +745,14 @@
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
 
-      // CORREÇÃO DO CONTADOR DE PARADAS (EVITA 91/90 AO CONCLUIR)
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
       let currentStepDisplay;
       if (completedCount === totalCount) {
-        currentStepDisplay = totalCount; // Trava em 90/90 quando todas forem entregues
+        currentStepDisplay = totalCount;
       } else {
-        currentStepDisplay = currentIndex + 1; // Exibe o número da parada ativa
+        currentStepDisplay = currentIndex + 1;
       }
 
       document.getElementById('current-step-num').innerText = currentStepDisplay;
@@ -962,6 +1009,9 @@
           optimizeRouteSequential();
           renderStops(true);
           toggleModal('paradas-modal', false);
+
+          // SELECIONA AUTOMATICAMENTE A PARADA MAIS PRÓXIMA DA POSIÇÃO DO GPS AO CARREGAR A PLANILHA
+          selectNearestStopFromGPS();
         } else {
           alert("Nenhum registro encontrado na planilha.");
         }
