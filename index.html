@@ -554,7 +554,7 @@
     }
 
     /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
-    /* LOGICA COMBINADA: RUA (120M) -> BLOCO/QUARTEIRÃO (200M) -> PROXIMIDADE GERAL */
+    /* LOGICA COMBINADA: RUA (100M) -> BLOCO/QUARTEIRÃO (200M) -> PROXIMIDADE GERAL */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -583,8 +583,8 @@
 
       let nextIndex = -1;
 
-      // 1. Prioridade: Mesma rua a até 120 metros
-      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 120);
+      // 1. Prioridade: Mesma rua a até 100 metros
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 100);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
