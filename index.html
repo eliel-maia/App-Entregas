@@ -368,6 +368,36 @@
       return false;
     }
 
+    /* FUNÇÃO ROBUSTA PARA NORMALIZAR E EXTRAIR NOME DE RUA INDEPENDE DE FORMATAÇÃO E PREFIXOS */
+    function extractStreetName(fullAddress) {
+      if (!fullAddress) return '';
+      
+      // 1. Pega a parte antes do número/vírgula/hífen se existir
+      let base = fullAddress.split(',')[0].split('-')[0];
+      
+      // 2. Normaliza caracteres acentuados
+      let clean = base.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+      
+      // 3. Remove prefixos logradouros comuns no início da string
+      const prefixes = [
+        /^rua\b\s*/, /^r\.\s*/, /^r\b\s*/,
+        /^avenida\b\s*/, /^av\.\s*/, /^av\b\s*/,
+        /^alameda\b\s*/, /^alm\.\s*/,
+        /^travessa\b\s*/, /^tv\.\s*/,
+        /^praca\b\s*/, /^pca\.\s*/,
+        /^rodovia\b\s*/, /^rod\.\s*/
+      ];
+
+      for (let p of prefixes) {
+        clean = clean.replace(p, '');
+      }
+
+      // 4. Remove números e caracteres especiais residuais
+      clean = clean.replace(/[0-9]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
+
+      return clean;
+    }
+
     /* CÁLCULO DE DISTÂNCIA DE ALTA PRECISÃO PARA ÁREAS URBANAS (EM METROS) */
     function calculateDistanceInMeters(lat1, lon1, lat2, lon2) {
       const R = 6371000; // Raio médio da Terra em metros
@@ -554,28 +584,19 @@
     }
 
     /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
-    /* LOGICA COMBINADA: RUA (100M) -> BLOCO/QUARTEIRÃO (200M) -> PROXIMIDADE GERAL */
+    /* LÓGICA COMBINADA: RUA COMPATÍVEL (100M) -> BLOCO/QUARTEIRÃO (200M) -> PROXIMIDADE GERAL */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
       currentStop.status = status;
 
-      function extractStreetName(fullAddress) {
-        if (!fullAddress) return '';
-        let clean = fullAddress.split(',')[0]
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .replace(/[0-9]/g, '')
-          .trim()
-          .toLowerCase();
-        return clean;
-      }
-
       const currentStreet = extractStreetName(currentStop.address);
 
-      // Mapeia todas as paradas pendentes com suas distâncias exatas
+      // Mapeia todas as paradas pendentes com suas distâncias exatas e verificação de rua
       let allPendingWithDist = stopsData
         .map((s, idx) => {
-          const isSameStreet = extractStreetName(s.address) === currentStreet;
+          const streetCandidate = extractStreetName(s.address);
+          const isSameStreet = (streetCandidate !== '' && currentStreet !== '') && (streetCandidate === currentStreet);
           const distMeters = calculateDistanceInMeters(currentStop.lat, currentStop.lng, s.lat, s.lng);
           return { stop: s, index: idx, distMeters, isSameStreet };
         })
@@ -583,7 +604,7 @@
 
       let nextIndex = -1;
 
-      // 1. Prioridade: Mesma rua a até 100 metros
+      // 1. Prioridade: Mesma rua (normalizada) a até 100 metros
       let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 100);
 
       if (sameStreetNearby.length > 0) {
@@ -738,11 +759,9 @@
         const numA = parseInt(String(a.originalStop).replace(/[^0-9]/g, '')) || 0;
         const numB = parseInt(String(b.originalStop).replace(/[^0-9]/g, '')) || 0;
 
-        // Se uma é "+" e a outra não, a com "+" vem primeiro
         if (isPlusA && !isPlusB) return -1;
         if (!isPlusA && isPlusB) return 1;
 
-        // Se ambas são "+" ou ambas são normais, ordena pelo número
         return numA - numB;
       });
 
@@ -800,19 +819,7 @@
         let extraStopCounter = 0;
         const unnumberedAddressMap = new Map();
 
-        // 1. Extrai o nome base da rua sem números ou pontuações
-        function cleanStreetName(addr) {
-          if (!addr) return '';
-          return String(addr)
-            .split(',')[0]
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[0-9]/g, '')
-            .trim()
-            .toLowerCase();
-        }
-
-        // 2. Mapeia endereços da planilha que POSSUEM coordenadas válidas
+        // Mapeia endereços da planilha que POSSUEM coordenadas válidas
         const validCoordsByAddress = new Map();
         json.forEach(row => {
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
@@ -822,7 +829,7 @@
 
           if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
             const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
-            const streetName = cleanStreetName(fullAddr);
+            const streetName = extractStreetName(fullAddr);
             
             if (!validCoordsByAddress.has(fullAddr)) {
               validCoordsByAddress.set(fullAddr, { lat, lng });
@@ -833,7 +840,7 @@
           }
         });
 
-        // 3. Processa cada linha e monta as paradas
+        // Processa cada linha da planilha
         json.forEach((row, index) => {
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
           let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
@@ -843,9 +850,9 @@
 
           let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           const fullAddress = String(row['Destination Address'] || '').trim();
-          const streetName = cleanStreetName(fullAddress);
+          const streetName = extractStreetName(fullAddress);
 
-          // Se estiver sem coordenadas, pesquisa se o mesmo endereço/rua possui coordenada em outro pacote da planilha
+          // Se estiver sem coordenadas, pesquisa se o mesmo endereço/rua possui coordenada em outro pacote
           if (!isValidCoords) {
             const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
             if (foundCoords) {
