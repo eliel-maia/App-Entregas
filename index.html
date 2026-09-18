@@ -85,7 +85,7 @@
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
     .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     
-    /* CONTADOR DE PARADAS (BOLINHA AZUL + TEXTO PRETO SEM FUNDO) */
+    /* CONTADOR DE PARADAS */
     .step-counter-indicator {
       display: inline-flex;
       align-items: center;
@@ -154,7 +154,7 @@
       box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
     }
 
-    /* ESTRUTURA DOS MODAIS (LISTA DE PARADAS E DADOS DE PACOTES) */
+    /* ESTRUTURA DOS MODAIS */
     .modal {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white;
       z-index: 2000; display: none; flex-direction: column;
@@ -254,7 +254,6 @@
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
-        <!-- CONTADOR ESTILO BOLINHA + TEXTO SEM FUNDO -->
         <div class="step-counter-indicator" id="tag-step">
           <span class="step-counter-dot"></span>
           <span id="step-counter-text"><span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
@@ -331,14 +330,14 @@
           deferredPrompt = null;
         });
       } else {
-        alert("Para instalar:\n\n• No Android (Chrome): Toque nos 3 pontos no canto superior direito e selecione 'Adicionar à tela inicial' ou 'Instalar aplicativo'.\n• No iPhone (Safari): Toque no botão de Compartilhar e escolha 'Adicionar à Tela de Início'.");
+        alert("Para instalar:\n\n• No Android (Chrome): Toque nos 3 pontos e escolha 'Adicionar à tela inicial'.\n• No iPhone (Safari): Toque em Compartilhar e 'Adicionar à Tela de Início'.");
       }
     }
 
     /* ESTADO GLOBAL DA APLICAÇÃO */
     let stopsData = [];
     let currentIndex = 0;
-    let map;
+    let map = null;
     let markers = [];
     let userMarker = null;
     let userLocation = null;
@@ -368,17 +367,11 @@
       return false;
     }
 
-    /* FUNÇÃO ROBUSTA PARA NORMALIZAR E EXTRAIR NOME DE RUA INDEPENDE DE FORMATAÇÃO E PREFIXOS */
+    /* EXTRAÇÃO E NORMALIZAÇÃO DE LOGRADOURO */
     function extractStreetName(fullAddress) {
       if (!fullAddress) return '';
-      
-      // 1. Pega a parte antes do número/vírgula/hífen se existir
       let base = fullAddress.split(',')[0].split('-')[0];
-      
-      // 2. Normaliza caracteres acentuados
       let clean = base.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-      
-      // 3. Remove prefixos logradouros comuns no início da string
       const prefixes = [
         /^rua\b\s*/, /^r\.\s*/, /^r\b\s*/,
         /^avenida\b\s*/, /^av\.\s*/, /^av\b\s*/,
@@ -392,29 +385,23 @@
         clean = clean.replace(p, '');
       }
 
-      // 4. Remove números e caracteres especiais residuais
       clean = clean.replace(/[0-9]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
-
       return clean;
     }
 
-    /* CÁLCULO DE DISTÂNCIA DE ALTA PRECISÃO PARA ÁREAS URBANAS (EM METROS) */
+    /* CÁLCULO DE DISTÂNCIA DE ALTA PRECISÃO (EM METROS) */
     function calculateDistanceInMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371000; // Raio médio da Terra em metros
+      const R = 6371000;
       const rad = Math.PI / 180;
-      
       const dLat = (lat2 - lat1) * rad;
       const dLon = (lon2 - lon1) * rad;
       const meanLat = ((lat1 + lat2) / 2) * rad;
-
-      // Ajusta a variação da longitude pela latitude local
       const x = dLon * Math.cos(meanLat);
       const y = dLat;
-
       return Math.sqrt(x * x + y * y) * R;
     }
 
-    /* CÁLCULO DE TEMPO ESTIMADO DE ROTA PENDENTE */
+    /* CÁLCULO DE TEMPO ESTIMADO RESTANTE */
     function calculateRemainingTime() {
       const pendingStopsCount = stopsData.filter(s => s.status === 'pending').length;
       const totalMinutes = pendingStopsCount * 4;
@@ -424,7 +411,7 @@
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
 
-    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL DE PARADAS (BLOCO POR PROXIMIDADE) */
+    /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL */
     function optimizeRouteSequential() {
       if (stopsData.length <= 1) return;
       let centerLat = stopsData.reduce((s, p) => s + p.lat, 0) / stopsData.length;
@@ -451,41 +438,83 @@
       saveDataToStorage();
     }
 
-    /* INICIALIZAÇÃO E CONFIGURAÇÃO DO MAPA */
+    /* INICIALIZAÇÃO ROBUSTA DO MAPA COM TRATAMENTO DE CONTEXTO WEBGL */
     function initMap() {
+      if (map) {
+        try { map.remove(); } catch (e) {}
+        map = null;
+      }
+
+      const defaultCenter = stopsData[currentIndex] 
+        ? [stopsData[currentIndex].lng, stopsData[currentIndex].lat] 
+        : [-49.653, -22.222];
+
       map = new maplibregl.Map({
         container: 'map',
         style: 'https://tiles.stadiamaps.com/styles/alidade_smooth.json',
-        center: [-49.653, -22.222],
-        zoom: 14
+        center: defaultCenter,
+        zoom: 14,
+        trackResize: true
       });
+
+      // MONITORAMENTO E RECUPERAÇÃO DO CANVAS WEBGL PERDIDO PELO SISTEMA
+      setupMapRecovery();
 
       map.on('load', () => {
         const hasData = loadDataFromStorage();
         renderStops(hasData);
         startLiveTracking();
       });
+    }
 
-      /* RESTAURAÇÃO DO RENDERIZADOR WEBGL QUANDO VOLTAR DO BACKGROUND */
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && map) {
-          setTimeout(() => {
+    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO (SOLUÇÃO PARA O MAPA SUMIR AO MUDAR DE APP) */
+    function setupMapRecovery() {
+      const mapCanvas = map.getCanvas();
+
+      mapCanvas.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        console.warn('Perda de contexto WebGL detectada ao alternar de aplicativo.');
+      }, false);
+
+      mapCanvas.addEventListener('webglcontextrestored', () => {
+        console.log('Contexto WebGL restaurado pelo SO. Forçando recarga dos tiles...');
+        if (map) {
+          map.setStyle('https://tiles.stadiamaps.com/styles/alidade_smooth.json');
+          setTimeout(() => renderStops(false), 300);
+        }
+      }, false);
+    }
+
+    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP DEPOIS DE LONGO TEMPO EM SEGUNDO PLANO */
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          if (!map || !map.getCanvas() || map.getCanvas().width === 0) {
+            console.log("Reinicializando mapa corrompido...");
+            initMap();
+          } else {
             map.resize();
+            map.triggerRepaint();
             if (stopsData[currentIndex]) {
               map.setCenter([stopsData[currentIndex].lng, stopsData[currentIndex].lat]);
             }
-          }, 200);
-        }
-      });
+          }
+        }, 200);
+      }
     }
 
-    /* MONITORAMENTO DO GPS DO ENTREGADOR EM TEMPO REAL */
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handleVisibilityChange);
+
+    /* MONITORAMENTO DO GPS DO ENTREGADOR */
     function startLiveTracking() {
       if ('geolocation' in navigator) {
         navigator.geolocation.watchPosition((position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           userLocation = [lng, lat];
+
+          if (!map) return;
 
           const el = document.createElement('div');
           el.className = 'gps-pin-container';
@@ -508,8 +537,9 @@
       }
     }
 
-    /* CENTRALIZAÇÃO DO MAPA NA POSIÇÃO ATUAL DO DISPOSITIVO */
+    /* CENTRALIZAÇÃO NA POSIÇÃO ATUAL */
     function centerOnUserGPS() {
+      if (!map) return;
       if (userLocation) {
         map.flyTo({ center: userLocation, zoom: 15 });
       } else {
@@ -524,6 +554,8 @@
 
     /* DESENHO DOS PINOS DE ENTREGAS NO MAPA */
     function renderStops(fitMapBounds = false) {
+      if (!map) return;
+      
       markers.forEach(m => m.remove());
       markers = [];
 
@@ -571,20 +603,19 @@
       updateUI();
     }
 
-    /* SELEÇÃO DE PARADA E REPOSICIONAMENTO DA CÂMERA */
+    /* SELEÇÃO DE PARADA */
     function selectStop(index) {
       if (stopsData.length === 0) return;
       currentIndex = index;
       saveDataToStorage();
       const stop = stopsData[currentIndex];
-      if (stop && !isNaN(stop.lat)) {
-        map.flyTo({ center: [stop.lng, stop.lat], zoom:16 });
+      if (stop && !isNaN(stop.lat) && map) {
+        map.flyTo({ center: [stop.lng, stop.lat], zoom: 16 });
       }
       renderStops(false);
     }
 
-    /* REGISTRO DE STATUS DA ENTREGA E ROTEAMENTO INTELIGENTE DA PRÓXIMA PARADA */
-    /* LÓGICA COMBINADA: RUA COMPATÍVEL (100M) -> BLOCO/QUARTEIRÃO (200M) -> PROXIMIDADE GERAL */
+    /* REGISTRO DE STATUS E SEQUENCIAMENTO */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
       const currentStop = stopsData[currentIndex];
@@ -592,7 +623,6 @@
 
       const currentStreet = extractStreetName(currentStop.address);
 
-      // Mapeia todas as paradas pendentes com suas distâncias exatas e verificação de rua
       let allPendingWithDist = stopsData
         .map((s, idx) => {
           const streetCandidate = extractStreetName(s.address);
@@ -604,21 +634,18 @@
 
       let nextIndex = -1;
 
-      // 1. Prioridade: Mesma rua (normalizada) a até 100 metros
       let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 100);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        // 2. Prioridade: Quarteirão/Bloco Urbano Próximo (raio de 200 metros)
         let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 200);
 
         if (blockNearby.length > 0) {
           blockNearby.sort((a, b) => a.distMeters - b.distMeters);
           nextIndex = blockNearby[0].index;
         } else if (allPendingWithDist.length > 0) {
-          // 3. Prioridade: Parada mais próxima em qualquer local
           allPendingWithDist.sort((a, b) => a.distMeters - b.distMeters);
           nextIndex = allPendingWithDist[0].index;
         } else {
@@ -631,12 +658,12 @@
       renderStops(false);
       
       const activeStop = stopsData[currentIndex];
-      if (activeStop && !isNaN(activeStop.lat)) {
+      if (activeStop && !isNaN(activeStop.lat) && map) {
         map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
       }
     }
 
-    /* ATUALIZAÇÃO DA INTERFACE VISUAL (PAINÉIS E BOTÕES) */
+    /* ATUALIZAÇÃO DA INTERFACE VISUAL */
     function updateUI() {
       const tagsRow = document.getElementById('tags-row');
       const actionsContainer = document.getElementById('actions-container');
@@ -698,7 +725,7 @@
       document.getElementById(modalId).className = show ? 'modal active' : 'modal';
     }
 
-    /* ABRIR MODAL DE PACOTES - EXIBE APENAS A PARADA DE CADA PACOTE */
+    /* MODAL DE PACOTES DA PARADA ATUAL */
     function openPackagesModal() {
       if (stopsData.length === 0) return;
       const stop = stopsData[currentIndex];
@@ -742,8 +769,7 @@
       toggleModal('pacotes-modal', true);
     }
 
-    /* RENDERIZAÇÃO DA LISTA DE PARADAS DENTRO DO MODAL DE PARADAS */
-    /* CLASSIFICAÇÃO: PARADAS COM "+" PRIMEIRO, SEGUIDAS PELAS DEMAIS PARADAS */
+    /* RENDERIZAÇÃO DA LISTA NO MODAL DE PARADAS */
     function renderList() {
       const listContainer = document.getElementById('stops-list');
       listContainer.innerHTML = '';
@@ -819,7 +845,6 @@
         let extraStopCounter = 0;
         const unnumberedAddressMap = new Map();
 
-        // Mapeia endereços da planilha que POSSUEM coordenadas válidas
         const validCoordsByAddress = new Map();
         json.forEach(row => {
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
@@ -840,7 +865,6 @@
           }
         });
 
-        // Processa cada linha da planilha
         json.forEach((row, index) => {
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
           let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
@@ -852,7 +876,6 @@
           const fullAddress = String(row['Destination Address'] || '').trim();
           const streetName = extractStreetName(fullAddress);
 
-          // Se estiver sem coordenadas, pesquisa se o mesmo endereço/rua possui coordenada em outro pacote
           if (!isValidCoords) {
             const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
             if (foundCoords) {
