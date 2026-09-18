@@ -697,10 +697,18 @@
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
 
-      const deliveredCount = stopsData.filter(s => s.status === 'delivered').length;
+      // CORREÇÃO DO CONTADOR DE PARADAS (EVITA 91/90 AO CONCLUIR)
+      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
-      document.getElementById('current-step-num').innerText = deliveredCount + 1;
+      let currentStepDisplay;
+      if (completedCount === totalCount) {
+        currentStepDisplay = totalCount; // Trava em 90/90 quando todas forem entregues
+      } else {
+        currentStepDisplay = currentIndex + 1; // Exibe o número da parada ativa
+      }
+
+      document.getElementById('current-step-num').innerText = currentStepDisplay;
       document.getElementById('total-step-num').innerText = totalCount;
       
       document.getElementById('tag-stop').innerHTML = `PARADA&nbsp;${stop.originalStop}`;
