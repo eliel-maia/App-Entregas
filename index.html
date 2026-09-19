@@ -140,7 +140,6 @@
       border-radius: 22px; font-weight: 700; font-size: 13px; display: flex;
       align-items: center; justify-content: center; gap: 6px; cursor: pointer;
       box-shadow: 0 4px 12px rgba(80, 70, 229, 0.3);
-      text-transform: uppercase;
     }
     .btn-fail {
       flex: 1; height: 44px; background: #f1f5f9; color: #dc2626; border: none;
@@ -234,7 +233,6 @@
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
-      <button class="btn-icon-menu" onclick="selectNearestStopFromGPS()" title="Ir para a parada mais próxima" style="color: #5046e5;"><i class="fa-solid fa-route"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
         <i class="fa-solid fa-download"></i> Instalar
       </button>
@@ -252,7 +250,7 @@
     <!-- ÁREA DO MAPA INTERATIVO -->
     <div id="map"></div>
 
-    <!-- PAINEL INFERIOR (BOTTOM SHEET) -->
+    <!-- PAINEL DE INFORMAÇÕES DA PARADA ATUAL -->
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
@@ -343,18 +341,12 @@
     let markers = [];
     let userMarker = null;
     let userLocation = null;
-    let routeStartTime = null;
 
     /* GERENCIAMENTO DE PERSISTÊNCIA LOCAL (LOCALSTORAGE) */
     function saveDataToStorage() {
       try {
         localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
         localStorage.setItem('delivery_current_index', currentIndex.toString());
-        if (routeStartTime) {
-          localStorage.setItem('delivery_route_start_time', routeStartTime.toString());
-        } else {
-          localStorage.removeItem('delivery_route_start_time');
-        }
       } catch (e) {
         console.error("Erro ao salvar no storage:", e);
       }
@@ -364,11 +356,9 @@
       try {
         const savedStops = localStorage.getItem('delivery_stops_data');
         const savedIndex = localStorage.getItem('delivery_current_index');
-        const savedStart = localStorage.getItem('delivery_route_start_time');
         if (savedStops) {
           stopsData = JSON.parse(savedStops);
           currentIndex = savedIndex ? parseInt(savedIndex, 10) : 0;
-          routeStartTime = savedStart ? parseInt(savedStart, 10) : null;
           return true;
         }
       } catch (e) {
@@ -421,21 +411,6 @@
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     }
 
-    /* FORMATAR MILISSEGUNDOS EM TEXTO DE TEMPO DECORRIDO */
-    function formatElapsedTime(ms) {
-      const totalSeconds = Math.floor(ms / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-
-      let parts = [];
-      if (hours > 0) parts.push(`${hours}h`);
-      if (minutes > 0 || hours > 0) parts.push(`${minutes}m`);
-      parts.push(`${seconds}s`);
-
-      return parts.join(' ');
-    }
-
     /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL */
     function optimizeRouteSequential() {
       if (stopsData.length <= 1) return;
@@ -463,53 +438,7 @@
       saveDataToStorage();
     }
 
-    /* SELECIONA A PARADA PENDENTE MAIS PRÓXIMA DO GPS DO USUÁRIO */
-    function selectNearestStopFromGPS() {
-      if (stopsData.length === 0) {
-        alert("Nenhuma rota carregada.");
-        return;
-      }
-
-      const findAndSelect = (userLng, userLat) => {
-        let nearestIndex = -1;
-        let minDistance = Infinity;
-
-        stopsData.forEach((stop, index) => {
-          if (stop.status === 'pending' && typeof stop.lat === 'number' && typeof stop.lng === 'number' && !isNaN(stop.lat)) {
-            const dist = calculateDistanceInMeters(userLat, userLng, stop.lat, stop.lng);
-            if (dist < minDistance) {
-              minDistance = dist;
-              nearestIndex = index;
-            }
-          }
-        });
-
-        if (nearestIndex !== -1) {
-          selectStop(nearestIndex);
-        } else {
-          alert("Todas as entregas já foram concluídas ou nenhuma parada pendente foi encontrada!");
-        }
-      };
-
-      if (userLocation) {
-        findAndSelect(userLocation[0], userLocation[1]);
-      } else if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            userLocation = [position.coords.longitude, position.coords.latitude];
-            findAndSelect(userLocation[0], userLocation[1]);
-          },
-          (error) => {
-            alert("Não foi possível obter sua localização via GPS. Certifique-se de que a localização está ativada no seu dispositivo.");
-          },
-          { enableHighAccuracy: true }
-        );
-      } else {
-        alert("Geolocalização não é suportada neste navegador.");
-      }
-    }
-
-    /* INICIALIZAÇÃO ROBUSTA DO MAPA */
+    /* INICIALIZAÇÃO ROBUSTA DO MAPA COM TRATAMENTO DE CONTEXTO WEBGL */
     function initMap() {
       if (map) {
         try { map.remove(); } catch (e) {}
@@ -528,6 +457,7 @@
         trackResize: true
       });
 
+      // MONITORAMENTO E RECUPERAÇÃO DO CANVAS WEBGL PERDIDO PELO SISTEMA
       setupMapRecovery();
 
       map.on('load', () => {
@@ -537,6 +467,7 @@
       });
     }
 
+    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO (SOLUÇÃO PARA O MAPA SUMIR AO MUDAR DE APP) */
     function setupMapRecovery() {
       const mapCanvas = map.getCanvas();
 
@@ -554,6 +485,7 @@
       }, false);
     }
 
+    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP DEPOIS DE LONGO TEMPO EM SEGUNDO PLANO */
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         setTimeout(() => {
@@ -686,11 +618,6 @@
     /* REGISTRO DE STATUS E SEQUENCIAMENTO */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
-
-      if (!routeStartTime) {
-        routeStartTime = Date.now();
-      }
-
       const currentStop = stopsData[currentIndex];
       currentStop.status = status;
 
@@ -707,13 +634,13 @@
 
       let nextIndex = -1;
 
-      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeter <= 250);
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 250);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        let blockNearby = allPendingWithDist.filter(item => item.distMet <= 200);
+        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 200);
 
         if (blockNearby.length > 0) {
           blockNearby.sort((a, b) => a.distMeters - b.distMeters);
@@ -726,19 +653,13 @@
         }
       }
 
-      if (nextIndex !== -1) {
-        currentIndex = nextIndex;
-      }
-
+      if (nextIndex !== -1) currentIndex = nextIndex;
       saveDataToStorage();
       renderStops(false);
-
-      const remainingPending = stopsData.filter(s => s.status === 'pending').length;
-      if (remainingPending > 0) {
-        const activeStop = stopsData[currentIndex];
-        if (activeStop && !isNaN(activeStop.lat) && map) {
-          map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
-        }
+      
+      const activeStop = stopsData[currentIndex];
+      if (activeStop && !isNaN(activeStop.lat) && map) {
+        map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
       }
     }
 
@@ -764,28 +685,6 @@
         return;
       }
 
-      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
-      const totalCount = stopsData.length;
-
-      // EXIBIÇÃO AO CONCLUIR A ROTA (IGUAL AO PRINT)
-      if (completedCount === totalCount) {
-        tagsRow.style.setProperty('display', 'none', 'important');
-        const elapsedFormatted = routeStartTime ? formatElapsedTime(Date.now() - routeStartTime) : '0s';
-        
-        document.getElementById('time-val').innerText = '0m';
-        document.getElementById('address-title').innerText = '🎉 ROTA FINALIZADA!';
-        document.getElementById('address-subtitle').innerText = `Tempo total percorrido: ${elapsedFormatted}`;
-        
-        // BOTÃO CARREGAR PLANILHA DIRETAMENTE NO MENU INFERIOR
-        actionsContainer.innerHTML = `
-          <label for="excel-upload" class="btn-start-route" style="flex:1; margin:0; cursor:pointer;">
-            <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA
-          </label>
-        `;
-        renderList();
-        return;
-      }
-
       tagsRow.style.setProperty('display', 'flex', 'important');
       const stop = stopsData[currentIndex] || stopsData[0];
       let totalPkgs = 0, deliveredPkgs = 0;
@@ -798,7 +697,18 @@
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
 
-      document.getElementById('current-step-num').innerText = currentIndex + 1;
+      // CORREÇÃO DO CONTADOR DE PARADAS (EVITA 91/90 AO CONCLUIR)
+      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
+      const totalCount = stopsData.length;
+
+      let currentStepDisplay;
+      if (completedCount === totalCount) {
+        currentStepDisplay = totalCount; // Trava em 90/90 quando todas forem entregues
+      } else {
+        currentStepDisplay = currentIndex + 1; // Exibe o número da parada ativa
+      }
+
+      document.getElementById('current-step-num').innerText = currentStepDisplay;
       document.getElementById('total-step-num').innerText = totalCount;
       
       document.getElementById('tag-stop').innerHTML = `PARADA&nbsp;${stop.originalStop}`;
@@ -1049,12 +959,9 @@
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
           stopsData = newStops;
-          routeStartTime = null;
           optimizeRouteSequential();
           renderStops(true);
           toggleModal('paradas-modal', false);
-
-          selectNearestStopFromGPS();
         } else {
           alert("Nenhum registro encontrado na planilha.");
         }
