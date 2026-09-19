@@ -367,7 +367,7 @@
       return false;
     }
 
-    /* EXTRAÇÃO E NORMALIZAÇÃO DE LOGRADOURO */
+    /* EXTRAÇÃO E NORMALIZAÇÃO DE LOGRADOURO PARA NAVEGAÇÃO */
     function extractStreetName(fullAddress) {
       if (!fullAddress) return '';
       let base = fullAddress.split(',')[0].split('-')[0];
@@ -387,6 +387,20 @@
 
       clean = clean.replace(/[0-9]/g, '').replace(/[^a-z0-9\s]/g, '').trim();
       return clean;
+    }
+
+    /* NORMALIZAÇÃO DE ENDEREÇO PARA AGRUPAMENTO (ISOLA RUA + NÚMERO) */
+    function normalizeAddressForGrouping(fullAddress) {
+      if (!fullAddress) return '';
+      let norm = fullAddress.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      let parts = norm.split(',');
+      let street = extractStreetName(parts[0] || '');
+      let number = '';
+      if (parts.length > 1) {
+        let match = parts[1].match(/\d+/);
+        if (match) number = match[0];
+      }
+      return `${street}_${number}`;
     }
 
     /* CÁLCULO DE DISTÂNCIA DE ALTA PRECISÃO (EM METROS) */
@@ -467,7 +481,7 @@
       });
     }
 
-    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO (SOLUÇÃO PARA O MAPA SUMIR AO MUDAR DE APP) */
+    /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO */
     function setupMapRecovery() {
       const mapCanvas = map.getCanvas();
 
@@ -485,7 +499,7 @@
       }, false);
     }
 
-    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP DEPOIS DE LONGO TEMPO EM SEGUNDO PLANO */
+    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP */
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         setTimeout(() => {
@@ -697,15 +711,14 @@
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
 
-      // CORREÇÃO DO CONTADOR DE PARADAS (EVITA 91/90 AO CONCLUIR)
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
       let currentStepDisplay;
       if (completedCount === totalCount) {
-        currentStepDisplay = totalCount; // Trava em 90/90 quando todas forem entregues
+        currentStepDisplay = totalCount;
       } else {
-        currentStepDisplay = currentIndex + 1; // Exibe o número da parada ativa
+        currentStepDisplay = currentIndex + 1;
       }
 
       document.getElementById('current-step-num').innerText = currentStepDisplay;
@@ -883,6 +896,7 @@
           let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           const fullAddress = String(row['Destination Address'] || '').trim();
           const streetName = extractStreetName(fullAddress);
+          const normalizedAddress = normalizeAddressForGrouping(fullAddress);
 
           if (!isValidCoords) {
             const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
@@ -899,9 +913,10 @@
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
           const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
 
-          const locationKey = isValidCoords 
-            ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}_ADDR_${fullAddress.toLowerCase()}`
-            : `ADDR_INDEX_${index}_${fullAddress.toLowerCase()}`;
+          // Chave baseada prioritariamente no endereço normalizado (rua + número) para agrupar corretamente
+          const locationKey = normalizedAddress !== '_' 
+            ? `ADDR_${normalizedAddress}`
+            : (isValidCoords ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}` : `INDEX_${index}`);
 
           let rawStop = '';
 
@@ -935,6 +950,10 @@
                 return numA - numB;
               });
               existing.originalStop = existing.stopsList[0];
+            }
+            // Mantém a descrição mais concisa se o endereço novo for menor
+            if (fullAddress && fullAddress.length < existing.address.length) {
+              existing.address = fullAddress;
             }
           } else {
             stopsMap.set(key, {
