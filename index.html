@@ -707,13 +707,13 @@
 
       let nextIndex = -1;
 
-      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeter <= 200);
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeter <= 250);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 150);
+        let blockNearby = allPendingWithDist.filter(item => item.distMeter <= 300);
 
         if (blockNearby.length > 0) {
           blockNearby.sort((a, b) => a.distMeters - b.distMeters);
