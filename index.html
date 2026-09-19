@@ -83,8 +83,13 @@
     }
 
     .sheet-handle { width: 36px; height: 4px; background: #e5e5ea; border-radius: 2px; margin: 0 auto 10px auto; }
-    .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
     
+    /* LINHA DE TAGS COM ALINHAMENTO NAS EXTREMIDADES */
+    .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+    
+    /* GRUPO DE TAGS À DIREITA */
+    .tags-right-group { display: flex; gap: 8px; align-items: center; }
+
     /* CONTADOR DE PARADAS */
     .step-counter-indicator {
       display: inline-flex;
@@ -250,21 +255,25 @@
     <!-- ÁREA DO MAPA INTERATIVO -->
     <div id="map"></div>
 
-    <!-- PAINEL DE INFORMAÇÕES DA PARADA ATUAL -->
+    <!-- PAINEL INFERIOR (BOTTOM SHEET) - INFORMAÇÕES DA ENTREGA ATUAL -->
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div class="tags-row" id="tags-row" style="display: none !important;">
+        <!-- INDICADOR DE ETAPA (ESQUERDA) -->
         <div class="step-counter-indicator" id="tag-step">
           <span class="step-counter-dot"></span>
           <span id="step-counter-text"><span id="current-step-num">1</span>/<span id="total-step-num">1</span></span>
         </div>
 
-        <span class="tag-blue" id="tag-stop">PARADA&nbsp;<span id="current-stop-num">1</span></span>
-        <button class="tag-packages-btn" onclick="openPackagesModal()">
-          <i class="fa-solid fa-box" style="color: #ff5500;"></i>
-          <span id="tag-packages">1 PACOTE(S)</span>
-          <i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px; color: #ff5500;"></i>
-        </button>
+        <!-- GRUPO DE TAGS (DIREITA) -->
+        <div class="tags-right-group">
+          <span class="tag-blue" id="tag-stop">PARADA&nbsp;<span id="current-stop-num">1</span></span>
+          <button class="tag-packages-btn" onclick="openPackagesModal()">
+            <i class="fa-solid fa-box" style="color: #ff5500;"></i>
+            <span id="tag-packages">1 PACOTE(S)</span>
+            <i class="fa-solid fa-chevron-right chevron-icon" style="font-size:9px; color: #ff5500;"></i>
+          </button>
+        </div>
       </div>
       <div class="address-title" id="address-title">AGUARDANDO PLANILHA</div>
       <div class="address-subtitle" id="address-subtitle">Abra o menu e carregue o arquivo</div>
@@ -913,7 +922,6 @@
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
           const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
 
-          // Chave baseada prioritariamente no endereço normalizado (rua + número) para agrupar corretamente
           const locationKey = normalizedAddress !== '_' 
             ? `ADDR_${normalizedAddress}`
             : (isValidCoords ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}` : `INDEX_${index}`);
@@ -951,7 +959,6 @@
               });
               existing.originalStop = existing.stopsList[0];
             }
-            // Mantém a descrição mais concisa se o endereço novo for menor
             if (fullAddress && fullAddress.length < existing.address.length) {
               existing.address = fullAddress;
             }
