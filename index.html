@@ -389,7 +389,7 @@
       return clean;
     }
 
-    /* NORMALIZAÇÃO DE ENDEREÇO PARA AGRUPAMENTO SECUNDÁRIO (RUA + NÚMERO) */
+    /* NORMALIZAÇÃO DE ENDEREÇO PARA AGRUPAMENTO (ISOLA RUA + NÚMERO) */
     function normalizeAddressForGrouping(fullAddress) {
       if (!fullAddress) return '';
       let norm = fullAddress.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -471,6 +471,7 @@
         trackResize: true
       });
 
+      // MONITORAMENTO E RECUPERAÇÃO DO CANVAS WEBGL PERDIDO PELO SISTEMA
       setupMapRecovery();
 
       map.on('load', () => {
@@ -850,47 +851,6 @@
       });
     }
 
-    /* ENRIQUECIMENTO DE ENDEREÇO EM SEGUNDO PLANO (BACKGROUND WORKER) */
-    async function enrichAddressesInBackground() {
-      for (let i = 0; i < stopsData.length; i++) {
-        const stop = stopsData[i];
-
-        // Se o endereço da planilha parecer incompleto ou for gerado automaticamente
-        if (stop.lat && stop.lng) {
-          try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${stop.lat}&lon=${stop.lng}`,
-              { headers: { 'Accept-Language': 'pt-BR' } }
-            );
-            const data = await response.json();
-
-            if (data && data.address) {
-              const road = data.address.road || data.address.pedestrian || data.address.suburb;
-              const houseNumber = data.address.house_number || '';
-              
-              // Se tiver dados válidos do servidor de geocodificação, atualiza o nome
-              if (road && (!stop.address || stop.address.includes('Sem nome'))) {
-                stopsData[i].address = houseNumber ? `${road}, ${houseNumber}` : road;
-              }
-              
-              if (data.address.suburb && (!stop.neighborhood || stop.neighborhood === '')) {
-                stopsData[i].neighborhood = data.address.suburb;
-              }
-
-              // Atualiza silenciosamente a interface e salva o progresso
-              saveDataToStorage();
-              updateUI();
-            }
-          } catch (err) {
-            console.warn("Aviso ao buscar endereço em segundo plano:", err);
-          }
-
-          // Delay preventivo para evitar ultrapassar o limite da API pública (300ms)
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-      }
-    }
-
     /* CARREGAMENTO E PROCESSAMENTO DA PLANILHA EXCEL */
     function handleFileUpload(event) {
       const file = event.target.files[0];
@@ -906,6 +866,26 @@
         let extraStopCounter = 0;
         const unnumberedAddressMap = new Map();
 
+        const validCoordsByAddress = new Map();
+        json.forEach(row => {
+          let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
+          let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
+          let lat = parseFloat(rawLat);
+          let lng = parseFloat(rawLng);
+
+          if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
+            const streetName = extractStreetName(fullAddr);
+            
+            if (!validCoordsByAddress.has(fullAddr)) {
+              validCoordsByAddress.set(fullAddr, { lat, lng });
+            }
+            if (streetName && !validCoordsByAddress.has(streetName)) {
+              validCoordsByAddress.set(streetName, { lat, lng });
+            }
+          }
+        });
+
         json.forEach((row, index) => {
           let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
           let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
@@ -915,15 +895,28 @@
 
           let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
           const fullAddress = String(row['Destination Address'] || '').trim();
+          const streetName = extractStreetName(fullAddress);
           const normalizedAddress = normalizeAddressForGrouping(fullAddress);
 
-          // ETAPA 1: VALIDAÇÃO E AGRUPAMENTO PRINCIPAL POR LATITUDE E LONGITUDE (PRECISÃO ~11 METROS)
-          const locationKey = isValidCoords 
-            ? `GEO_${lat.toFixed(4)}_${lng.toFixed(4)}`
-            : (normalizedAddress !== '_' ? `ADDR_${normalizedAddress}` : `INDEX_${index}`);
+          if (!isValidCoords) {
+            const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
+            if (foundCoords) {
+              lat = foundCoords.lat;
+              lng = foundCoords.lng;
+              isValidCoords = true;
+            } else {
+              lat = -22.2223;
+              lng = -49.6531;
+            }
+          }
 
           const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
           const isNumbered = rawStopVal !== '' && rawStopVal !== '-' && !isNaN(parseInt(rawStopVal, 10));
+
+          // Chave baseada prioritariamente no endereço normalizado (rua + número) para agrupar corretamente
+          const locationKey = normalizedAddress !== '_' 
+            ? `ADDR_${normalizedAddress}`
+            : (isValidCoords ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}` : `INDEX_${index}`);
 
           let rawStop = '';
 
@@ -958,6 +951,7 @@
               });
               existing.originalStop = existing.stopsList[0];
             }
+            // Mantém a descrição mais concisa se o endereço novo for menor
             if (fullAddress && fullAddress.length < existing.address.length) {
               existing.address = fullAddress;
             }
@@ -974,8 +968,8 @@
                 stopNumber: rawStop, 
                 code: spxCode 
               }], 
-              lat: lat || -22.2223, 
-              lng: lng || -49.6531, 
+              lat: lat, 
+              lng: lng, 
               status: 'pending'
             });
           }
@@ -984,16 +978,9 @@
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
           stopsData = newStops;
-          
-          // Otimiza a rota sequencialmente
           optimizeRouteSequential();
-          
-          // Renderiza os marcadores na tela de imediato
           renderStops(true);
           toggleModal('paradas-modal', false);
-
-          // ETAPA 2: DISPARA O PROCESSAMENTO DE ENDEREÇOS EM SEGUNDO PLANO
-          enrichAddressesInBackground();
         } else {
           alert("Nenhum registro encontrado na planilha.");
         }
