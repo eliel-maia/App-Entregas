@@ -238,6 +238,7 @@
     <div class="menu-bar-left">
       <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
+      <button class="btn-icon-menu" onclick="selectNearestStopToUser()" title="Ir para a parada mais próxima da minha localização" style="color: #5046e5;"><i class="fa-solid fa-route"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
         <i class="fa-solid fa-download"></i> Instalar
       </button>
@@ -572,6 +573,49 @@
         }, () => {
           alert("Não foi possível obter sua localização atual. Verifique se o GPS está ativado.");
         }, { enableHighAccuracy: true });
+      }
+    }
+
+    /* SELECIONAR A PARADA PENDENTE MAIS PRÓXIMA DA POSIÇÃO ATUAL DO USUÁRIO */
+    function selectNearestStopToUser() {
+      if (stopsData.length === 0) return;
+
+      const processSelection = (uLng, uLat) => {
+        let bestIndex = -1;
+        let minDistance = Infinity;
+
+        stopsData.forEach((stop, index) => {
+          if (stop.status === 'pending' && typeof stop.lat === 'number' && typeof stop.lng === 'number' && !isNaN(stop.lat)) {
+            const dist = calculateDistanceInMeters(uLat, uLng, stop.lat, stop.lng);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestIndex = index;
+            }
+          }
+        });
+
+        if (bestIndex !== -1) {
+          selectStop(bestIndex);
+        } else {
+          alert("Nenhuma parada pendente foi encontrada.");
+        }
+      };
+
+      if (userLocation) {
+        processSelection(userLocation[0], userLocation[1]);
+      } else if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            userLocation = [position.coords.longitude, position.coords.latitude];
+            processSelection(userLocation[0], userLocation[1]);
+          },
+          () => {
+            alert("Não foi possível obter sua localização atual para identificar a parada mais próxima.");
+          },
+          { enableHighAccuracy: true }
+        );
+      } else {
+        alert("Geolocalização não suportada neste dispositivo.");
       }
     }
 
