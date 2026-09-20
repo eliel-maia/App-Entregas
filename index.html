@@ -351,12 +351,16 @@
     let markers = [];
     let userMarker = null;
     let userLocation = null;
+    let routeStartTime = null;
+    let routeEndTime = null;
 
     /* GERENCIAMENTO DE PERSISTÊNCIA LOCAL (LOCALSTORAGE) */
     function saveDataToStorage() {
       try {
         localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
         localStorage.setItem('delivery_current_index', currentIndex.toString());
+        if (routeStartTime) localStorage.setItem('delivery_route_start_time', routeStartTime.toString());
+        if (routeEndTime) localStorage.setItem('delivery_route_end_time', routeEndTime.toString());
       } catch (e) {
         console.error("Erro ao salvar no storage:", e);
       }
@@ -366,9 +370,13 @@
       try {
         const savedStops = localStorage.getItem('delivery_stops_data');
         const savedIndex = localStorage.getItem('delivery_current_index');
+        const savedStartTime = localStorage.getItem('delivery_route_start_time');
+        const savedEndTime = localStorage.getItem('delivery_route_end_time');
         if (savedStops) {
           stopsData = JSON.parse(savedStops);
           currentIndex = savedIndex ? parseInt(savedIndex, 10) : 0;
+          if (savedStartTime) routeStartTime = parseInt(savedStartTime, 10);
+          if (savedEndTime) routeEndTime = parseInt(savedEndTime, 10);
           return true;
         }
       } catch (e) {
@@ -433,6 +441,23 @@
       const hours = Math.floor(totalMinutes / 60);
       const minutes = totalMinutes % 60;
       return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    }
+
+    /* CÁLCULO DO TEMPO TOTAL PERCORRIDO */
+    function calculateTotalElapsedTime() {
+      if (!routeStartTime) return '0m';
+      const endTime = routeEndTime || Date.now();
+      const diffMs = endTime - routeStartTime;
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      let parts = [];
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0 || hours > 0) parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+      return parts.join(' ');
     }
 
     /* ALGORITMO DE OTIMIZAÇÃO SEQUENCIAL */
@@ -685,6 +710,12 @@
     /* REGISTRO DE STATUS E SEQUENCIAMENTO */
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
+
+      // Inicia a contagem de tempo do percurso na primeira parada concluída
+      if (!routeStartTime) {
+        routeStartTime = Date.now();
+      }
+
       const currentStop = stopsData[currentIndex];
       currentStop.status = status;
 
@@ -720,6 +751,13 @@
         }
       }
 
+      // Se não houver mais paradas pendentes, finaliza a rota e salva o tempo de fim
+      if (allPendingWithDist.length === 0) {
+        if (!routeEndTime) {
+          routeEndTime = Date.now();
+        }
+      }
+
       if (nextIndex !== -1) currentIndex = nextIndex;
       saveDataToStorage();
       renderStops(false);
@@ -752,8 +790,6 @@
         return;
       }
 
-      tagsRow.style.setProperty('display', 'flex', 'important');
-      const stop = stopsData[currentIndex] || stopsData[0];
       let totalPkgs = 0, deliveredPkgs = 0;
       stopsData.forEach(s => {
         totalPkgs += s.packagesCount;
@@ -763,6 +799,28 @@
       document.getElementById('time-val').innerText = calculateRemainingTime();
       document.getElementById('delivered-pkgs').innerText = deliveredPkgs;
       document.getElementById('total-pkgs').innerText = totalPkgs;
+
+      const pendingCount = stopsData.filter(s => s.status === 'pending').length;
+
+      /* CHECAGEM DE FINALIZAÇÃO DE ROTA */
+      if (pendingCount === 0) {
+        if (!routeEndTime) routeEndTime = Date.now();
+        tagsRow.style.setProperty('display', 'none', 'important');
+        
+        document.getElementById('address-title').innerText = '🎉 ROTA FINALIZADA!';
+        document.getElementById('address-subtitle').innerText = `Tempo total percorrido: ${calculateTotalElapsedTime()}`;
+
+        actionsContainer.innerHTML = `
+          <label for="excel-upload" class="btn-start-route" style="flex:1; margin:0; cursor:pointer;">
+            <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA
+          </label>
+        `;
+        renderList();
+        return;
+      }
+
+      tagsRow.style.setProperty('display', 'flex', 'important');
+      const stop = stopsData[currentIndex] || stopsData[0];
 
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
@@ -1029,6 +1087,10 @@
         const newStops = Array.from(stopsMap.values());
         if (newStops.length > 0) {
           stopsData = newStops;
+          routeStartTime = null;
+          routeEndTime = null;
+          localStorage.removeItem('delivery_route_start_time');
+          localStorage.removeItem('delivery_route_end_time');
           optimizeRouteSequential();
           renderStops(true);
           toggleModal('paradas-modal', false);
