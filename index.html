@@ -732,7 +732,7 @@
 
       let nextIndex = -1;
 
-      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 300);
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 280);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
@@ -825,14 +825,11 @@
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
-      /* CORREÇÃO DO CONTADOR:
-         Mostra o total de paradas já finalizadas + 1 (se a parada atual for pendente), 
-         garantindo que exiba a ordem correta de progresso (ex: 2/90, 3/90). */
       let currentStepDisplay;
-      if (stop.status !== 'pending') {
-        currentStepDisplay = completedCount;
+      if (completedCount === totalCount) {
+        currentStepDisplay = totalCount;
       } else {
-        currentStepDisplay = completedCount + 1;
+        currentStepDisplay = currentIndex + 1;
       }
 
       document.getElementById('current-step-num').innerText = currentStepDisplay;
@@ -1101,7 +1098,7 @@
           alert("Nenhum registro encontrado na planilha.");
         }
       };
-      reader.readAsBuffer(file);
+      reader.readAsArrayBuffer(file);
     }
 
     /* INICIALIZADOR AO CARREGAR A PÁGINA */
