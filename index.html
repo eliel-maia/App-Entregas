@@ -738,7 +738,7 @@
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
         nextIndex = sameStreetNearby[0].index;
       } else {
-        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 200);
+        let blockNearby = allPendingWithDist.filter(item => item.distMeters <= 300);
 
         if (blockNearby.length > 0) {
           blockNearby.sort((a, b) => a.distMeters - b.distMeters);
