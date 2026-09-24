@@ -732,7 +732,7 @@
 
       let nextIndex = -1;
 
-      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 280);
+      let sameStreetNearby = allPendingWithDist.filter(item => item.isSameStreet && item.distMeters <= 300);
 
       if (sameStreetNearby.length > 0) {
         sameStreetNearby.sort((a, b) => a.distMeters - b.distMeters);
