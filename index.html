@@ -822,14 +822,18 @@
       tagsRow.style.setProperty('display', 'flex', 'important');
       const stop = stopsData[currentIndex] || stopsData[0];
 
-      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
       const totalCount = stopsData.length;
 
+      // Conta o total de paradas já concluídas (entregues ou com falha)
+      const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
+
+      // Se a parada atualmente selecionada já foi concluída, mostra o total concluído atingido.
+      // Se for uma parada pendente, o contador exibirá a ordem da próxima conclusão (concluídas + 1).
       let currentStepDisplay;
-      if (completedCount === totalCount) {
-        currentStepDisplay = totalCount;
+      if (stop.status === 'delivered' || stop.status === 'failed') {
+        currentStepDisplay = completedCount;
       } else {
-        currentStepDisplay = currentIndex + 1;
+        currentStepDisplay = completedCount + 1;
       }
 
       document.getElementById('current-step-num').innerText = currentStepDisplay;
