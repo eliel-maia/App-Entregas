@@ -487,14 +487,39 @@
       saveDataToStorage();
     }
 
+    /* VERIFICA SE O CANVAS DO MAPA ESTÁ ATIVO E SAUDÁVEL */
+    function isMapCanvasHealthy() {
+      if (!map) return false;
+      try {
+        const canvas = map.getCanvas();
+        if (!canvas) return false;
+        if (canvas.width === 0 || canvas.height === 0) return false;
+        
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl && gl.isContextLost()) return false;
+
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     /* INICIALIZAÇÃO ROBUSTA DO MAPA COM TRATAMENTO DE CONTEXTO WEBGL */
     function initMap() {
       if (map) {
-        try { map.remove(); } catch (e) {}
+        try { 
+          markers.forEach(m => m.remove());
+          markers = [];
+          if (userMarker) userMarker.remove();
+          userMarker = null;
+          map.remove(); 
+        } catch (e) {
+          console.warn("Aviso ao limpar instância antiga do mapa:", e);
+        }
         map = null;
       }
 
-      const defaultCenter = stopsData[currentIndex] 
+      const defaultCenter = (stopsData.length > 0 && stopsData[currentIndex]) 
         ? [stopsData[currentIndex].lng, stopsData[currentIndex].lat] 
         : [-49.653, -22.222];
 
@@ -518,6 +543,7 @@
 
     /* TRATAMENTO AUTOMÁTICO DE PERDA DE CONTEXTO GRÁFICO */
     function setupMapRecovery() {
+      if (!map) return;
       const mapCanvas = map.getCanvas();
 
       mapCanvas.addEventListener('webglcontextlost', (e) => {
@@ -526,34 +552,33 @@
       }, false);
 
       mapCanvas.addEventListener('webglcontextrestored', () => {
-        console.log('Contexto WebGL restaurado pelo SO. Forçando recarga dos tiles...');
-        if (map) {
-          map.setStyle('https://tiles.stadiamaps.com/styles/alidade_smooth.json');
-          setTimeout(() => renderStops(false), 300);
-        }
+        console.log('Contexto WebGL restaurado pelo SO. Reinicializando mapa...');
+        setTimeout(() => initMap(), 200);
       }, false);
     }
 
-    /* RESTRUTURAÇÃO DO MAPEAMENTO AO RETORNAR PARA O APP */
+    /* RECUPERAÇÃO AO RETORNAR PARA O APP (EX: VOLTANDO DA SHOPEE) */
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') {
         setTimeout(() => {
-          if (!map || !map.getCanvas() || map.getCanvas().width === 0) {
-            console.log("Reinicializando mapa corrompido...");
+          if (!isMapCanvasHealthy()) {
+            console.log("Mapa corrompido ou contexto WebGL perdido. Reinicializando mapa...");
             initMap();
           } else {
+            console.log("Mapa saudável. Redimensionando e redesenhando...");
             map.resize();
             map.triggerRepaint();
             if (stopsData[currentIndex]) {
               map.setCenter([stopsData[currentIndex].lng, stopsData[currentIndex].lat]);
             }
           }
-        }, 200);
+        }, 300);
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pageshow', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
 
     /* MONITORAMENTO DO GPS DO ENTREGADOR */
     function startLiveTracking() {
@@ -563,15 +588,15 @@
           const lng = position.coords.longitude;
           userLocation = [lng, lat];
 
-          if (!map) return;
-
-          const el = document.createElement('div');
-          el.className = 'gps-pin-container';
-          el.innerHTML = '<div class="gps-marker-ring"><div class="gps-marker-inner"></div></div>';
+          if (!map || !isMapCanvasHealthy()) return;
 
           if (userMarker) {
             userMarker.setLngLat(userLocation);
           } else {
+            const el = document.createElement('div');
+            el.className = 'gps-pin-container';
+            el.innerHTML = '<div class="gps-marker-ring"><div class="gps-marker-inner"></div></div>';
+
             userMarker = new maplibregl.Marker({ element: el })
               .setLngLat(userLocation)
               .addTo(map);
@@ -588,7 +613,7 @@
 
     /* CENTRALIZAÇÃO NA POSIÇÃO ATUAL */
     function centerOnUserGPS() {
-      if (!map) return;
+      if (!map || !isMapCanvasHealthy()) return;
       if (userLocation) {
         map.flyTo({ center: userLocation, zoom: 15 });
       } else {
@@ -646,7 +671,7 @@
 
     /* DESENHO DOS PINOS DE ENTREGAS NO MAPA */
     function renderStops(fitMapBounds = false) {
-      if (!map) return;
+      if (!map || !isMapCanvasHealthy()) return;
       
       markers.forEach(m => m.remove());
       markers = [];
@@ -701,7 +726,7 @@
       currentIndex = index;
       saveDataToStorage();
       const stop = stopsData[currentIndex];
-      if (stop && !isNaN(stop.lat) && map) {
+      if (stop && !isNaN(stop.lat) && map && isMapCanvasHealthy()) {
         map.flyTo({ center: [stop.lng, stop.lat], zoom: 16 });
       }
       renderStops(false);
@@ -711,7 +736,6 @@
     function setDeliveryStatus(status) {
       if (stopsData.length === 0) return;
 
-      // Inicia a contagem de tempo do percurso na primeira parada concluída
       if (!routeStartTime) {
         routeStartTime = Date.now();
       }
@@ -751,7 +775,6 @@
         }
       }
 
-      // Se não houver mais paradas pendentes, finaliza a rota e salva o tempo de fim
       if (allPendingWithDist.length === 0) {
         if (!routeEndTime) {
           routeEndTime = Date.now();
@@ -763,7 +786,7 @@
       renderStops(false);
       
       const activeStop = stopsData[currentIndex];
-      if (activeStop && !isNaN(activeStop.lat) && map) {
+      if (activeStop && !isNaN(activeStop.lat) && map && isMapCanvasHealthy()) {
         map.flyTo({ center: [activeStop.lng, activeStop.lat], zoom: 16 });
       }
     }
@@ -802,7 +825,6 @@
 
       const pendingCount = stopsData.filter(s => s.status === 'pending').length;
 
-      /* CHECAGEM DE FINALIZAÇÃO DE ROTA */
       if (pendingCount === 0) {
         if (!routeEndTime) routeEndTime = Date.now();
         tagsRow.style.setProperty('display', 'none', 'important');
@@ -823,12 +845,8 @@
       const stop = stopsData[currentIndex] || stopsData[0];
 
       const totalCount = stopsData.length;
-
-      // Conta o total de paradas já concluídas (entregues ou com falha)
       const completedCount = stopsData.filter(s => s.status === 'delivered' || s.status === 'failed').length;
 
-      // Se a parada atualmente selecionada já foi concluída, mostra o total concluído atingido.
-      // Se for uma parada pendente, o contador exibirá a ordem da próxima conclusão (concluídas + 1).
       let currentStepDisplay;
       if (stop.status === 'delivered' || stop.status === 'failed') {
         currentStepDisplay = completedCount;
