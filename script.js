@@ -36,7 +36,7 @@ let userLocation = null;
 let routeStartTime = null;
 let routeEndTime = null;
 
-// Função utilitária para respeitar a taxa de 1 req/seg da API gratuita do OpenStreetMap
+// Função utilitária para respeitar a taxa da API
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function saveDataToStorage() {
@@ -652,13 +652,6 @@ async function handleFileUpload(event) {
   if (!file) return;
 
   const actionsContainer = document.getElementById('actions-container');
-  if (actionsContainer) {
-    actionsContainer.innerHTML = `
-      <div style="flex:1; text-align:center; padding:12px; font-weight:700; color:#5046e5;">
-        <i class="fa-solid fa-spinner fa-spin"></i> LENDO E VALIDANDO PLANILHA...
-      </div>
-    `;
-  }
 
   const reader = new FileReader();
   reader.onload = async function(e) {
@@ -666,83 +659,81 @@ async function handleFileUpload(event) {
     const workbook = XLSX.read(data, { type: 'array' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet);
+
+    const totalRows = json.length;
     
     const stopsMap = new Map();
     let extraStopCounter = 0;
     const unnumberedAddressMap = new Map();
-    const validCoordsByAddress = new Map();
+    const geocodedCache = new Map();
 
-    json.forEach(row => {
-      let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
-      let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
-      let lat = parseFloat(rawLat);
-      let lng = parseFloat(rawLng);
-
-      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-        const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
-        const streetName = extractStreetName(fullAddr);
-        
-        if (!validCoordsByAddress.has(fullAddr)) {
-          validCoordsByAddress.set(fullAddr, { lat, lng });
-        }
-        if (streetName && !validCoordsByAddress.has(streetName)) {
-          validCoordsByAddress.set(streetName, { lat, lng });
-        }
-      }
-    });
-
-    for (let index = 0; index < json.length; index++) {
+    for (let index = 0; index < totalRows; index++) {
       const row = json[index];
+
+      // Atualiza o progresso visual na tela durante o loop
+      if (actionsContainer) {
+        const pct = Math.round(((index + 1) / totalRows) * 100);
+        actionsContainer.innerHTML = `
+          <div style="flex:1; text-align:center; padding:12px; font-weight:700; color:#5046e5; font-size: 13px;">
+            <i class="fa-solid fa-spinner fa-spin"></i> VALIDANDO API: ${index + 1} / ${totalRows} (${pct}%)
+          </div>
+        `;
+      }
       
       let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
       let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
       
-      let lat = parseFloat(rawLat);
-      let lng = parseFloat(rawLng);
+      let excelLat = parseFloat(rawLat);
+      let excelLng = parseFloat(rawLng);
 
-      let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       const fullAddress = String(row['Destination Address'] || '').trim();
       const neighborhood = String(row['Bairro'] || '').trim();
       const city = String(row['City'] || '').trim();
-      const streetName = extractStreetName(fullAddress);
       const normalizedAddress = normalizeAddressForGrouping(fullAddress);
+      
+      let finalLat = excelLat;
+      let finalLng = excelLng;
 
-      if (!isValidCoords) {
-        const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
-        if (foundCoords) {
-          lat = foundCoords.lat;
-          lng = foundCoords.lng;
-          isValidCoords = true;
-        } else if (fullAddress) {
+      // Validação com prioridade total na API do Nominatim
+      if (fullAddress) {
+        const queryAddress = `${fullAddress}${neighborhood ? ', ' + neighborhood : ''}${city ? ', ' + city : ''}`.toLowerCase();
+        
+        let apiCoords = geocodedCache.get(queryAddress);
+
+        if (!apiCoords) {
           try {
-            const queryAddress = `${fullAddress}${neighborhood ? ', ' + neighborhood : ''}${city ? ', ' + city : ''}`;
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1`;
-            
             const response = await fetch(url, {
               headers: { 'User-Agent': 'MinhaPWAEntrega/1.0' }
             });
             const apiData = await response.json();
 
             if (apiData && apiData.length > 0) {
-              lat = parseFloat(apiData[0].lat);
-              lng = parseFloat(apiData[0].lon);
-              isValidCoords = true;
-              validCoordsByAddress.set(fullAddress.toLowerCase(), { lat, lng });
-            } else {
-              lat = -22.2223;
-              lng = -49.6531;
+              apiCoords = {
+                lat: parseFloat(apiData[0].lat),
+                lng: parseFloat(apiData[0].lon)
+              };
+              geocodedCache.set(queryAddress, apiCoords);
             }
 
-            await sleep(1000);
+            // Pausa otimizada de 750ms para suportar 80-100 paradas sem ser bloqueado
+            await sleep(750);
           } catch (err) {
-            console.error("Erro na busca do endereço:", err);
-            lat = -22.2223;
-            lng = -49.6531;
+            console.error("Erro na validação do endereço via API:", err);
           }
-        } else {
-          lat = -22.2223;
-          lng = -49.6531;
         }
+
+        // Se a API retornou o ponto, sobrescreve a coordenada da planilha
+        if (apiCoords) {
+          finalLat = apiCoords.lat;
+          finalLng = apiCoords.lng;
+        }
+      }
+
+      // Fallback de segurança se nem a API nem o Excel retornarem dados válidos
+      if (isNaN(finalLat) || isNaN(finalLng) || finalLat === 0 || finalLng === 0) {
+        finalLat = -22.2223;
+        finalLng = -49.6531;
       }
 
       const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
@@ -750,7 +741,7 @@ async function handleFileUpload(event) {
 
       const locationKey = normalizedAddress !== '_' 
         ? `ADDR_${normalizedAddress}`
-        : (isValidCoords ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}` : `INDEX_${index}`);
+        : `POS_${finalLat.toFixed(5)}_${finalLng.toFixed(5)}`;
 
       let rawStop = '';
 
@@ -801,8 +792,8 @@ async function handleFileUpload(event) {
             stopNumber: rawStop, 
             code: spxCode 
           }], 
-          lat: lat, 
-          lng: lng, 
+          lat: finalLat, 
+          lng: finalLng, 
           status: 'pending'
         });
       }
