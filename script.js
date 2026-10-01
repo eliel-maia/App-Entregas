@@ -36,6 +36,9 @@ let userLocation = null;
 let routeStartTime = null;
 let routeEndTime = null;
 
+// Função utilitária para respeitar a taxa de 1 req/seg da API gratuita do OpenStreetMap
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 function saveDataToStorage() {
   try {
     localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
@@ -644,21 +647,31 @@ function renderList() {
   });
 }
 
-function handleFileUpload(event) {
+async function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
+
+  const actionsContainer = document.getElementById('actions-container');
+  if (actionsContainer) {
+    actionsContainer.innerHTML = `
+      <div style="flex:1; text-align:center; padding:12px; font-weight:700; color:#5046e5;">
+        <i class="fa-solid fa-spinner fa-spin"></i> LENDO E VALIDANDO PLANILHA...
+      </div>
+    `;
+  }
+
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: 'array' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet);
-    const stopsMap = new Map();
     
+    const stopsMap = new Map();
     let extraStopCounter = 0;
     const unnumberedAddressMap = new Map();
-
     const validCoordsByAddress = new Map();
+
     json.forEach(row => {
       let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
       let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
@@ -678,7 +691,9 @@ function handleFileUpload(event) {
       }
     });
 
-    json.forEach((row, index) => {
+    for (let index = 0; index < json.length; index++) {
+      const row = json[index];
+      
       let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
       let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
       
@@ -687,6 +702,8 @@ function handleFileUpload(event) {
 
       let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       const fullAddress = String(row['Destination Address'] || '').trim();
+      const neighborhood = String(row['Bairro'] || '').trim();
+      const city = String(row['City'] || '').trim();
       const streetName = extractStreetName(fullAddress);
       const normalizedAddress = normalizeAddressForGrouping(fullAddress);
 
@@ -696,6 +713,32 @@ function handleFileUpload(event) {
           lat = foundCoords.lat;
           lng = foundCoords.lng;
           isValidCoords = true;
+        } else if (fullAddress) {
+          try {
+            const queryAddress = `${fullAddress}${neighborhood ? ', ' + neighborhood : ''}${city ? ', ' + city : ''}`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1`;
+            
+            const response = await fetch(url, {
+              headers: { 'User-Agent': 'MinhaPWAEntrega/1.0' }
+            });
+            const apiData = await response.json();
+
+            if (apiData && apiData.length > 0) {
+              lat = parseFloat(apiData[0].lat);
+              lng = parseFloat(apiData[0].lon);
+              isValidCoords = true;
+              validCoordsByAddress.set(fullAddress.toLowerCase(), { lat, lng });
+            } else {
+              lat = -22.2223;
+              lng = -49.6531;
+            }
+
+            await sleep(1000);
+          } catch (err) {
+            console.error("Erro na busca do endereço:", err);
+            lat = -22.2223;
+            lng = -49.6531;
+          }
         } else {
           lat = -22.2223;
           lng = -49.6531;
@@ -751,8 +794,8 @@ function handleFileUpload(event) {
           originalStop: rawStop, 
           stopsList: [rawStop],
           address: fullAddress || 'Endereço sem nome', 
-          neighborhood: row['Bairro'] || '', 
-          city: row['City'] || '',
+          neighborhood: neighborhood, 
+          city: city,
           packagesCount: 1, 
           packagesList: [{ 
             stopNumber: rawStop, 
@@ -763,7 +806,7 @@ function handleFileUpload(event) {
           status: 'pending'
         });
       }
-    });
+    }
 
     const newStops = Array.from(stopsMap.values());
     if (newStops.length > 0) {
@@ -777,6 +820,7 @@ function handleFileUpload(event) {
       toggleModal('paradas-modal', false);
     } else {
       alert("Nenhum registro encontrado na planilha.");
+      updateUI();
     }
   };
   reader.readAsArrayBuffer(file);
