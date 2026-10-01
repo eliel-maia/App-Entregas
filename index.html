@@ -14,21 +14,18 @@
   <!-- ÍCONE ÚNICO PARA APPLE / IPHONE -->
   <link rel="apple-touch-icon" href="./icone.png">
 
-  <!-- BIBLIOTECAS EXTERNAS (CSS) -->
+  <!-- BIBLIOTECAS EXTERNAS -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
   <!-- VÍNCULO COM O SEU ARQUIVO CSS EXTERNO -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- INPUT GLOBAL DE ARQUIVO (Visível via labels com for="excel-upload") -->
-  <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onclick="this.value=null;" onchange="handleFileUpload(event)">
-
   <div id="app-container">
     <div class="menu-bar-left">
-      <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)" title="Abrir menu de paradas"><i class="fa-solid fa-bars"></i></button>
+      <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
       <button class="btn-icon-menu" onclick="selectNearestStopToUser()" title="Ir para a parada mais próxima da minha localização" style="color: #3b30e2;"><i class="fa-solid fa-route"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
@@ -68,7 +65,6 @@
       <div class="actions-row" id="actions-container"></div>
     </div>
 
-    <!-- MODAL DE LISTA DE PARADAS -->
     <div id="paradas-modal" class="modal">
       <div class="modal-header">
         <h3>Lista de Paradas</h3>
@@ -78,11 +74,11 @@
         <label for="excel-upload" class="upload-btn">
           <i class="fa-solid fa-file-excel"></i> CARREGAR PLANILHA
         </label>
+        <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onclick="this.value=null;" onchange="handleFileUpload(event)">
         <div id="stops-list"></div>
       </div>
     </div>
 
-    <!-- MODAL DE PACOTES DA PARADA -->
     <div id="pacotes-modal" class="modal">
       <div class="modal-header">
         <h3>Pacotes da Parada</h3>
@@ -94,11 +90,11 @@
     </div>
   </div>
 
-  <!-- LIBRARIES EXTERNAS (JS) -->
+  <!-- LIBRARIAS EXTERNAS -->
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-  <!-- VÍNCULO COM O ARQUIVO JAVASCRIPT EXTERNO -->
+  <!-- VÍNCULO COM O SEU ARQUIVO JAVASCRIPT EXTERNO -->
   <script src="script.js"></script>
 </body>
 </html>

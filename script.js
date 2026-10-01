@@ -36,9 +36,6 @@ let userLocation = null;
 let routeStartTime = null;
 let routeEndTime = null;
 
-// Função utilitária para respeitar a taxa da API
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 function saveDataToStorage() {
   try {
     localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
@@ -647,93 +644,62 @@ function renderList() {
   });
 }
 
-async function handleFileUpload(event) {
+function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-
-  const actionsContainer = document.getElementById('actions-container');
-
   const reader = new FileReader();
-  reader.onload = async function(e) {
+  reader.onload = function(e) {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: 'array' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet);
-
-    const totalRows = json.length;
-    
     const stopsMap = new Map();
+    
     let extraStopCounter = 0;
     const unnumberedAddressMap = new Map();
-    const geocodedCache = new Map();
 
-    for (let index = 0; index < totalRows; index++) {
-      const row = json[index];
+    const validCoordsByAddress = new Map();
+    json.forEach(row => {
+      let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
+      let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
+      let lat = parseFloat(rawLat);
+      let lng = parseFloat(rawLng);
 
-      // Atualiza o progresso visual na tela durante o loop
-      if (actionsContainer) {
-        const pct = Math.round(((index + 1) / totalRows) * 100);
-        actionsContainer.innerHTML = `
-          <div style="flex:1; text-align:center; padding:12px; font-weight:700; color:#5046e5; font-size: 13px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> VALIDANDO API: ${index + 1} / ${totalRows} (${pct}%)
-          </div>
-        `;
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
+        const streetName = extractStreetName(fullAddr);
+        
+        if (!validCoordsByAddress.has(fullAddr)) {
+          validCoordsByAddress.set(fullAddr, { lat, lng });
+        }
+        if (streetName && !validCoordsByAddress.has(streetName)) {
+          validCoordsByAddress.set(streetName, { lat, lng });
+        }
       }
-      
+    });
+
+    json.forEach((row, index) => {
       let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
       let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
       
-      let excelLat = parseFloat(rawLat);
-      let excelLng = parseFloat(rawLng);
+      let lat = parseFloat(rawLat);
+      let lng = parseFloat(rawLng);
 
+      let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
       const fullAddress = String(row['Destination Address'] || '').trim();
-      const neighborhood = String(row['Bairro'] || '').trim();
-      const city = String(row['City'] || '').trim();
+      const streetName = extractStreetName(fullAddress);
       const normalizedAddress = normalizeAddressForGrouping(fullAddress);
-      
-      let finalLat = excelLat;
-      let finalLng = excelLng;
 
-      // Validação com prioridade total na API do Nominatim
-      if (fullAddress) {
-        const queryAddress = `${fullAddress}${neighborhood ? ', ' + neighborhood : ''}${city ? ', ' + city : ''}`.toLowerCase();
-        
-        let apiCoords = geocodedCache.get(queryAddress);
-
-        if (!apiCoords) {
-          try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryAddress)}&limit=1`;
-            const response = await fetch(url, {
-              headers: { 'User-Agent': 'MinhaPWAEntrega/1.0' }
-            });
-            const apiData = await response.json();
-
-            if (apiData && apiData.length > 0) {
-              apiCoords = {
-                lat: parseFloat(apiData[0].lat),
-                lng: parseFloat(apiData[0].lon)
-              };
-              geocodedCache.set(queryAddress, apiCoords);
-            }
-
-            // Pausa otimizada de 750ms para suportar 80-100 paradas sem ser bloqueado
-            await sleep(750);
-          } catch (err) {
-            console.error("Erro na validação do endereço via API:", err);
-          }
+      if (!isValidCoords) {
+        const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
+        if (foundCoords) {
+          lat = foundCoords.lat;
+          lng = foundCoords.lng;
+          isValidCoords = true;
+        } else {
+          lat = -22.2223;
+          lng = -49.6531;
         }
-
-        // Se a API retornou o ponto, sobrescreve a coordenada da planilha
-        if (apiCoords) {
-          finalLat = apiCoords.lat;
-          finalLng = apiCoords.lng;
-        }
-      }
-
-      // Fallback de segurança se nem a API nem o Excel retornarem dados válidos
-      if (isNaN(finalLat) || isNaN(finalLng) || finalLat === 0 || finalLng === 0) {
-        finalLat = -22.2223;
-        finalLng = -49.6531;
       }
 
       const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
@@ -741,7 +707,7 @@ async function handleFileUpload(event) {
 
       const locationKey = normalizedAddress !== '_' 
         ? `ADDR_${normalizedAddress}`
-        : `POS_${finalLat.toFixed(5)}_${finalLng.toFixed(5)}`;
+        : (isValidCoords ? `POS_${lat.toFixed(5)}_${lng.toFixed(5)}` : `INDEX_${index}`);
 
       let rawStop = '';
 
@@ -785,19 +751,19 @@ async function handleFileUpload(event) {
           originalStop: rawStop, 
           stopsList: [rawStop],
           address: fullAddress || 'Endereço sem nome', 
-          neighborhood: neighborhood, 
-          city: city,
+          neighborhood: row['Bairro'] || '', 
+          city: row['City'] || '',
           packagesCount: 1, 
           packagesList: [{ 
             stopNumber: rawStop, 
             code: spxCode 
           }], 
-          lat: finalLat, 
-          lng: finalLng, 
+          lat: lat, 
+          lng: lng, 
           status: 'pending'
         });
       }
-    }
+    });
 
     const newStops = Array.from(stopsMap.values());
     if (newStops.length > 0) {
@@ -811,7 +777,6 @@ async function handleFileUpload(event) {
       toggleModal('paradas-modal', false);
     } else {
       alert("Nenhum registro encontrado na planilha.");
-      updateUI();
     }
   };
   reader.readAsArrayBuffer(file);
