@@ -83,14 +83,14 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 }
 
 .tag-blue { 
-  background: #eeefff; color: #5046e5; padding: 6px 12px; border-radius: 12px; 
-  font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
+  background: #eeefff; color: #4038b7; padding: 6px 12px; border-radius: 12px; 
+  font-size: 11px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
   border: none;
 }
 
 .tag-packages-btn {
-  background: #fff2ec; color: #ff5500; padding: 6px 12px; 
-  border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; display: inline-flex;
+  background: #fff2ec; color: #c20034; padding: 6px 12px; 
+  border-radius: 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: inline-flex;
   align-items: center; gap: 6px; text-transform: uppercase; border: none;
 }
 
@@ -115,13 +115,13 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 }
 .btn-fail {
   flex: 1; height: 44px; background: #f1f5f9; color: #dc2626; border: none;
-  border-radius: 22px; font-weight: 700; font-size: 10px; display: flex;
+  border-radius: 22px; font-weight: 700; font-size: 12px; display: flex;
   flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
   box-shadow: 0 4px 10px rgba(220, 38, 38, 0.08);
 }
 .btn-success {
   flex: 1.2; height: 44px; background: #059669; color: white; border: none;
-  border-radius: 22px; font-weight: 700; font-size: 10px; display: flex;
+  border-radius: 22px; font-weight: 700; font-size: 12px; display: flex;
   flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
 }
@@ -165,17 +165,50 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
   width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #5046e5;
 }
+
+/* BALÃO COM FUNDO BRANCO, NÚMERO E CONTORNO NA COR #c20034 */
 .pkg-badge {
   position: absolute; top: -4px; right: -10px; width: 16px; height: 16px; border-radius: 50%;
-  background: #ffffff; color: #ff5500; font-size: 9px; font-weight: 800;
+  background: #ffffff; color: #c20034; font-size: 11px; font-weight: 900;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #ff5500; z-index: 10;
 }
+
 .custom-pin.active { width: 32px; height: 32px; font-size: 12px; background: #ff5500; color: #ffffff; z-index: 999; }
 .custom-pin.active::after { border-top-color: #ff5500; }
 .custom-pin.done { background: #10b981; color: white; }
 .custom-pin.done::after { border-top-color: #10b981; }
 .custom-pin.failed { background: #ef4444; color: white; }
 .custom-pin.failed::after { border-top-color: #ef4444; }
+
+/* Cor diferenciada para paradas sem coordenadas reais */
+.custom-pin.no-coords { background: #c207cb; color: white; }
+.custom-pin.no-coords::after { border-top-color: #c207cb; }
+
+/* Balão vermelho compacto de alerta "VALIDAR ENDEREÇO" */
+.validate-address-badge {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  border: 1px solid #ffffff;
+  z-index: 20;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.validate-address-badge i {
+  font-size: 7px;
+}
+
 
 .gps-pin-container { background: transparent; border: none; cursor: pointer; }
 .gps-marker-ring {

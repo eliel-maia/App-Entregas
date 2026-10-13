@@ -354,12 +354,21 @@ function renderStops(fitMapBounds = false) {
       if (item.status === 'delivered') statusClass = 'done';
       if (item.status === 'failed') statusClass = 'failed';
       
+      if (item.hasRealCoords === false) {
+        statusClass = 'no-coords';
+      }
+      
+      const validateBadge = (item.hasRealCoords === false) 
+        ? `<div class="validate-address-badge"><i class="fa-solid fa-triangle-exclamation"></i> Validar Endereço</div>` 
+        : '';
+
       const badgeHtml = item.packagesCount > 1 ? `<div class="pkg-badge">${item.packagesCount}</div>` : '';
       
       const el = document.createElement('div');
       el.className = 'custom-pin-container';
       el.innerHTML = `
         <div class="custom-pin-wrapper">
+          ${validateBadge}
           <div class="custom-pin ${isActive ? 'active' : ''} ${statusClass}">
             ${item.originalStop || (index+1)}
             ${badgeHtml}
@@ -659,47 +668,82 @@ function handleFileUpload(event) {
     const unnumberedAddressMap = new Map();
 
     const validCoordsByAddress = new Map();
+    const validCoordsByNormalized = new Map();
+    const coordinateOccurrences = new Map();
+
     json.forEach(row => {
       let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
       let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
       let lat = parseFloat(rawLat);
       let lng = parseFloat(rawLng);
 
-      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      const isBrasilCoords = !isNaN(lat) && !isNaN(lng) && lat < 5 && lat > -35 && lng < -30 && lng > -75;
+
+      if (isBrasilCoords) {
         const fullAddr = String(row['Destination Address'] || '').trim().toLowerCase();
         const streetName = extractStreetName(fullAddr);
+        const normAddr = normalizeAddressForGrouping(row['Destination Address']);
         
-        if (!validCoordsByAddress.has(fullAddr)) {
+        if (fullAddr && !validCoordsByAddress.has(fullAddr)) {
           validCoordsByAddress.set(fullAddr, { lat, lng });
         }
         if (streetName && !validCoordsByAddress.has(streetName)) {
           validCoordsByAddress.set(streetName, { lat, lng });
         }
+        if (normAddr && normAddr !== '_' && !validCoordsByNormalized.has(normAddr)) {
+          validCoordsByNormalized.set(normAddr, { lat, lng });
+        }
       }
     });
 
     json.forEach((row, index) => {
-      let rawLat = String(row['Latitude'] || '').replace(',', '.').trim();
-      let rawLng = String(row['Longitude'] || '').replace(',', '.').trim();
+      let rawLatInput = String(row['Latitude'] || '').trim();
+      let rawLngInput = String(row['Longitude'] || '').trim();
       
-      let lat = parseFloat(rawLat);
-      let lng = parseFloat(rawLng);
+      let lat = parseFloat(rawLatInput.replace(',', '.'));
+      let lng = parseFloat(rawLngInput.replace(',', '.'));
 
-      let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+      let isValidCoords = !isNaN(lat) && !isNaN(lng) && lat < 5 && lat > -35 && lng < -30 && lng > -75;
+      
       const fullAddress = String(row['Destination Address'] || '').trim();
       const streetName = extractStreetName(fullAddress);
       const normalizedAddress = normalizeAddressForGrouping(fullAddress);
 
+      let hasRealCoords = true;
+
       if (!isValidCoords) {
-        const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || validCoordsByAddress.get(streetName);
+        const foundCoords = validCoordsByAddress.get(fullAddress.toLowerCase()) || 
+                            validCoordsByNormalized.get(normalizedAddress) || 
+                            validCoordsByAddress.get(streetName);
         if (foundCoords) {
           lat = foundCoords.lat;
           lng = foundCoords.lng;
           isValidCoords = true;
+          hasRealCoords = false; 
         } else {
-          lat = -22.2223;
-          lng = -49.6531;
+          let validLatList = Array.from(validCoordsByAddress.values()).map(c => c.lat);
+          let validLngList = Array.from(validCoordsByAddress.values()).map(c => c.lng);
+          
+          if (validLatList.length > 0) {
+            lat = validLatList.reduce((a, b) => a + b, 0) / validLatList.length;
+            lng = validLngList.reduce((a, b) => a + b, 0) / validLngList.length;
+          } else {
+            lat = -22.2250;
+            lng = -49.6550;
+          }
+          hasRealCoords = false;
         }
+      }
+
+      const coordKey = `${lat.toFixed(5)}_${lng.toFixed(5)}`;
+      let count = coordinateOccurrences.get(coordKey) || 0;
+      coordinateOccurrences.set(coordKey, count + 1);
+
+      if (count > 0) {
+        const angle = count * 1.5;
+        const distance = 0.00015 * count;
+        lat += distance * Math.cos(angle);
+        lng += distance * Math.sin(angle);
       }
 
       const rawStopVal = row['Stop'] !== undefined && row['Stop'] !== null ? String(row['Stop']).trim() : '';
@@ -715,7 +759,7 @@ function handleFileUpload(event) {
         rawStop = rawStopVal;
       } else {
         if (unnumberedAddressMap.has(locationKey)) {
-          rawStop = unnumberedAddressMap.get(locationKey);
+          rawStop = ununnumberedAddressMap.get(locationKey);
         } else {
           extraStopCounter++;
           rawStop = `+${extraStopCounter}`;
@@ -745,6 +789,9 @@ function handleFileUpload(event) {
         if (fullAddress && fullAddress.length < existing.address.length) {
           existing.address = fullAddress;
         }
+        if (hasRealCoords) {
+          existing.hasRealCoords = true;
+        }
       } else {
         stopsMap.set(key, {
           id: key, 
@@ -760,14 +807,15 @@ function handleFileUpload(event) {
           }], 
           lat: lat, 
           lng: lng, 
-          status: 'pending'
+          status: 'pending',
+          hasRealCoords: hasRealCoords
         });
       }
     });
 
-    const newStops = Array.from(stopsMap.values());
-    if (newStops.length > 0) {
-      stopsData = newStops;
+    const newStopsArray = Array.from(stopsMap.values());
+    if (newStopsArray.length > 0) {
+      stopsData = newStopsArray;
       routeStartTime = null;
       routeEndTime = null;
       localStorage.removeItem('delivery_route_start_time');
