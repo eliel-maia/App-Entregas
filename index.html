@@ -5,27 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Entregas</title>
   
+  <!-- ==========================================================================
+     1. CONFIGURAÇÕES DE PWA E META TAGS
+     ========================================================================== -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#5046e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Entregas">
   
-  <!-- ÍCONE ÚNICO PARA APPLE / IPHONE -->
+  <!-- Ícone exclusivo para dispositivos Apple / iPhone -->
   <link rel="apple-touch-icon" href="./icone.png">
 
-  <!-- BIBLIOTECAS EXTERNAS -->
+  <!-- ==========================================================================
+     2. BIBLIOTECAS EXTERNAS (Estilos)
+     ========================================================================== -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   
-  <!-- VÍNCULO COM O SEU ARQUIVO CSS EXTERNO -->
+  <!-- Folha de estilos personalizada do aplicativo -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <!-- ==========================================================================
+     3. CONTAINER PRINCIPAL DO APLICATIVO
+     ========================================================================== -->
   <div id="app-container">
+    
+    <!-- Barra de menu lateral esquerda (Ações rápidas e instalação) -->
     <div class="menu-bar-left">
-      <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)"><i class="fa-solid fa-bars"></i></button>
+      <button class="btn-icon-menu" onclick="toggleModal('paradas-modal', true)" title="Abrir lista de paradas"><i class="fa-solid fa-bars"></i></button>
       <button class="btn-icon-menu" onclick="centerOnUserGPS()" title="Centralizar na minha localização" style="color: #e11d48;"><i class="fa-solid fa-location-crosshairs"></i></button>
       <button class="btn-icon-menu" onclick="selectNearestStopToUser()" title="Ir para a parada mais próxima da minha localização" style="color: #3b30e2;"><i class="fa-solid fa-route"></i></button>
       <button id="btn-install" class="btn-install-badge" style="display:none;" onclick="triggerInstall()">
@@ -33,6 +43,7 @@
       </button>
     </div>
 
+    <!-- Barra superior direita (Estatísticas de tempo e entregas) -->
     <div class="top-bar-right">
       <div class="stats-card">
         <div class="stat-item"><span class="stat-label">RESTANTE</span><span class="stat-value" id="time-val">0m</span></div>
@@ -41,10 +52,14 @@
       </div>
     </div>
 
+    <!-- Elemento do mapa (MapLibre GL) -->
     <div id="map"></div>
 
+    <!-- Painel inferior deslizante (Bottom Sheet com controles de entrega) -->
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
+      
+      <!-- Linha de indicadores e tags da parada ativa -->
       <div class="tags-row" id="tags-row" style="display: none !important;">
         <div class="step-counter-indicator" id="tag-step">
           <span class="step-counter-dot"></span>
@@ -60,11 +75,20 @@
           </button>
         </div>
       </div>
+
+      <!-- Informações textuais do endereço atual -->
       <div class="address-title" id="address-title">AGUARDANDO PLANILHA</div>
       <div class="address-subtitle" id="address-subtitle">Abra o menu e carregue o arquivo</div>
+      
+      <!-- Linha de botões de ação (Waze, Falha, Entregue) -->
       <div class="actions-row" id="actions-container"></div>
     </div>
 
+    <!-- ==========================================================================
+       4. MODAIS DO APLICATIVO
+       ========================================================================== -->
+       
+    <!-- Modal: Lista de Paradas e Upload de Planilhas -->
     <div id="paradas-modal" class="modal">
       <div class="modal-header">
         <h3>Lista de Paradas</h3>
@@ -79,6 +103,7 @@
       </div>
     </div>
 
+    <!-- Modal: Detalhes dos Pacotes da Parada Selecionada -->
     <div id="pacotes-modal" class="modal">
       <div class="modal-header">
         <h3>Pacotes da Parada</h3>
@@ -88,13 +113,16 @@
         <div id="packages-list"></div>
       </div>
     </div>
+
   </div>
 
-  <!-- LIBRARIAS EXTERNAS -->
+  <!-- ==========================================================================
+     5. SCRIPTS E BIBLIOTECAS EXTERNAS
+     ========================================================================== -->
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-  <!-- VÍNCULO COM O SEU ARQUIVO JAVASCRIPT EXTERNO -->
+  <!-- Script principal com a lógica de execução -->
   <script src="script.js"></script>
 </body>
 </html>

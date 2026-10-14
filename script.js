@@ -1,3 +1,6 @@
+/* ==========================================================================
+   01. REGISTRO E CONTROLE DO SERVICE WORKER (PWA)
+   ========================================================================== */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
@@ -6,6 +9,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+/* ==========================================================================
+   02. INSTALAÇÃO DO APLICATIVO (Prompt PWA)
+   ========================================================================== */
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -27,6 +33,9 @@ function triggerInstall() {
   }
 }
 
+/* ==========================================================================
+   03. VARIÁVEIS GLOBAIS DE ESTADO DO APLICATIVO
+   ========================================================================== */
 let stopsData = [];
 let currentIndex = 0;
 let map = null;
@@ -35,7 +44,11 @@ let userMarker = null;
 let userLocation = null;
 let routeStartTime = null;
 let routeEndTime = null;
+let userSelectedPinAfterFinish = false;
 
+/* ==========================================================================
+   04. PERSISTÊNCIA DE DADOS (LocalStorage)
+   ========================================================================== */
 function saveDataToStorage() {
   try {
     localStorage.setItem('delivery_stops_data', JSON.stringify(stopsData));
@@ -66,6 +79,9 @@ function loadDataFromStorage() {
   return false;
 }
 
+/* ==========================================================================
+   05. UTILITÁRIOS DE ENDEREÇOS E CÁLCULOS GEOGRÁFICOS
+   ========================================================================== */
 function extractStreetName(fullAddress) {
   if (!fullAddress) return '';
   let base = fullAddress.split(',')[0].split('-')[0];
@@ -159,9 +175,13 @@ function optimizeRouteSequential() {
   }
   stopsData = ordered;
   currentIndex = 0;
+  userSelectedPinAfterFinish = false;
   saveDataToStorage();
 }
 
+/* ==========================================================================
+   06. GERENCIAMENTO E RECUPERAÇÃO DO MAPA (MapLibre & WebGL)
+   ========================================================================== */
 function isMapCanvasHealthy() {
   if (!map) return false;
   try {
@@ -250,6 +270,9 @@ document.addEventListener('visibilitychange', handleVisibilityChange);
 window.addEventListener('pageshow', handleVisibilityChange);
 window.addEventListener('focus', handleVisibilityChange);
 
+/* ==========================================================================
+   07. GEOLOCALIZAÇÃO E RASTREAMENTO DO USUÁRIO
+   ========================================================================== */
 function startLiveTracking() {
   if ('geolocation' in navigator) {
     navigator.geolocation.watchPosition((position) => {
@@ -336,6 +359,9 @@ function selectNearestStopToUser() {
   }
 }
 
+/* ==========================================================================
+   08. RENDERIZAÇÃO DE PONTOS NO MAPA E SELEÇÃO DE PARADAS
+   ========================================================================== */
 function renderStops(fitMapBounds = false) {
   if (!map || !isMapCanvasHealthy()) return;
   
@@ -351,12 +377,15 @@ function renderStops(fitMapBounds = false) {
 
       const isActive = index === currentIndex;
       let statusClass = '';
-      if (item.status === 'delivered') statusClass = 'done';
-      if (item.status === 'failed') statusClass = 'failed';
       
+      // Define a cor roxa se não houver coordenadas reais
       if (item.hasRealCoords === false) {
         statusClass = 'no-coords';
       }
+      
+      // Status de entrega tem prioridade máxima sobre a cor de alerta de coordenadas
+      if (item.status === 'delivered') statusClass = 'done';
+      if (item.status === 'failed') statusClass = 'failed';
       
       const validateBadge = (item.hasRealCoords === false) 
         ? `<div class="validate-address-badge"><i class="fa-solid fa-triangle-exclamation"></i> Validar Endereço</div>` 
@@ -398,6 +427,12 @@ function renderStops(fitMapBounds = false) {
 function selectStop(index) {
   if (stopsData.length === 0) return;
   currentIndex = index;
+
+  const pendingCount = stopsData.filter(s => s.status === 'pending').length;
+  if (pendingCount === 0) {
+    userSelectedPinAfterFinish = true;
+  }
+
   saveDataToStorage();
   const stop = stopsData[currentIndex];
   if (stop && !isNaN(stop.lat) && map && isMapCanvasHealthy()) {
@@ -406,6 +441,9 @@ function selectStop(index) {
   renderStops(false);
 }
 
+/* ==========================================================================
+   09. FLUXO DE STATUS DE ENTREGA (Entregue / Falha)
+   ========================================================================== */
 function setDeliveryStatus(status) {
   if (stopsData.length === 0) return;
 
@@ -455,6 +493,7 @@ function setDeliveryStatus(status) {
   }
 
   if (nextIndex !== -1) currentIndex = nextIndex;
+  userSelectedPinAfterFinish = false;
   saveDataToStorage();
   renderStops(false);
   
@@ -464,6 +503,9 @@ function setDeliveryStatus(status) {
   }
 }
 
+/* ==========================================================================
+   10. ATUALIZAÇÃO DA INTERFACE DO USUÁRIO (UI)
+   ========================================================================== */
 function updateUI() {
   const tagsRow = document.getElementById('tags-row');
   const actionsContainer = document.getElementById('actions-container');
@@ -497,7 +539,7 @@ function updateUI() {
 
   const pendingCount = stopsData.filter(s => s.status === 'pending').length;
 
-  if (pendingCount === 0) {
+  if (pendingCount === 0 && !userSelectedPinAfterFinish) {
     if (!routeEndTime) routeEndTime = Date.now();
     tagsRow.style.setProperty('display', 'none', 'important');
     
@@ -546,6 +588,9 @@ function updateUI() {
   renderList();
 }
 
+/* ==========================================================================
+   11. GERENCIAMENTO DE MODAIS (Paradas e Pacotes)
+   ========================================================================== */
 function toggleModal(modalId, show) {
   document.getElementById(modalId).className = show ? 'modal active' : 'modal';
 }
@@ -653,6 +698,9 @@ function renderList() {
   });
 }
 
+/* ==========================================================================
+   12. IMPORTAÇÃO E PROCESSAMENTO DE PLANILHAS (Excel / CSV)
+   ========================================================================== */
 function handleFileUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -830,4 +878,7 @@ function handleFileUpload(event) {
   reader.readAsArrayBuffer(file);
 }
 
+/* ==========================================================================
+   13. INICIALIZAÇÃO DA APLICAÇÃO
+   ========================================================================== */
 window.onload = initMap;

@@ -1,18 +1,30 @@
+/* ==========================================================================
+   1. CONFIGURAÇÕES GLOBAIS E RESET
+   ========================================================================== */
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 
+/* ==========================================================================
+   2. LAYOUT PRINCIPAL E MAPA
+   ========================================================================== */
 #app-container { position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column; }
 #map { width: 100%; height: 100%; z-index: 1; background: #e5e3df; }
 
+/* ==========================================================================
+   3. ELEMENTOS FLUTUANTES (Menus e Barras Superiores)
+   ========================================================================== */
+/* Barra de menu lateral esquerda (Ações rápidas e GPS) */
 .menu-bar-left {
   position: absolute; top: 12px; left: 12px; z-index: 1000; display: flex; gap: 8px; flex-direction: column;
 }
 
+/* Barra superior direita (Estatísticas) */
 .top-bar-right {
   position: absolute; top: 12px; right: 12px; z-index: 1000;
   display: flex; align-items: flex-start; justify-content: flex-end;
 }
 
+/* Estilo padrão para os botões de ícone do menu esquerdo */
 .btn-icon-menu {
   width: 38px; height: 38px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -20,6 +32,7 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   flex-shrink: 0;
 }
 
+/* Botão de fechar modais */
 .btn-close-modal {
   width: 36px; height: 36px; background: #ff5500; border: 2px solid #ffffff;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -27,12 +40,16 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   box-shadow: 0 3px 8px rgba(0,0,0,0.25);
 }
 
+/* Badge/Botão de instalação do PWA */
 .btn-install-badge {
   background: #5046e5; color: white; border-radius: 19px; padding: 0 14px; height: 38px;
   display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800;
   box-shadow: 0 4px 14px rgba(80,70,229,0.3); border: none; cursor: pointer; text-transform: uppercase;
 }
 
+/* ==========================================================================
+   4. CARD DE ESTATÍSTICAS (Tempo Restante e Entregas)
+   ========================================================================== */
 .stats-card {
   background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px);
   border-radius: 16px; padding: 6px 12px;
@@ -46,6 +63,9 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 .stat-value { font-size: 11px; font-weight: 800; color: #1f2937; margin-top: 1px; }
 .stat-divider { width: 1px; height: 18px; background-color: rgba(229, 231, 235, 0.8); }
 
+/* ==========================================================================
+   5. PAINEL INFERIOR (Bottom Sheet) E CONTROLES DE ROTA
+   ========================================================================== */
 .bottom-sheet {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
   background: rgba(252, 252, 254, 0.85);
@@ -61,31 +81,17 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 .tags-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 .tags-right-group { display: flex; gap: 8px; align-items: center; }
 
+/* Indicador de passo atual da rota */
 .step-counter-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 800;
-  color: #111827;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin-right: 4px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 800; color: #111827;
+  background: transparent; border: none; padding: 0; margin-right: 4px;
 }
-
-.step-counter-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: #5046e5;
-  display: inline-block;
-}
+.step-counter-dot { width: 7px; height: 7px; border-radius: 50%; background-color: #5046e5; display: inline-block; }
 
 .tag-blue { 
   background: #eeefff; color: #4038b7; padding: 6px 12px; border-radius: 12px; 
-  font-size: 11px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center;
-  border: none;
+  font-size: 11px; font-weight: 800; text-transform: uppercase; display: inline-flex; align-items: center; border: none;
 }
 
 .tag-packages-btn {
@@ -100,7 +106,11 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
 }
 .address-subtitle { font-size: 11px; color: #6b7280; margin-bottom: 14px; line-height: 1.3; }
 
+/* ==========================================================================
+   6. BOTÕES DE AÇÃO INFERIORES (Waze, Falha, Entregue)
+   ========================================================================== */
 .actions-row { display: flex; gap: 10px; margin-top: 6px; }
+
 .btn-waze-blue {
   flex: 1; height: 44px; background: #5046e5; color: white; border: none;
   border-radius: 22px; font-weight: 700; font-size: 12px; display: flex;
@@ -126,6 +136,9 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
 }
 
+/* ==========================================================================
+   7. MODAIS (Listas e Pacotes)
+   ========================================================================== */
 .modal {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white;
   z-index: 2000; display: none; flex-direction: column;
@@ -154,7 +167,11 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   border-radius: 10px; font-weight: 700; font-size: 11px; margin-bottom: 12px; cursor: pointer; text-align: center; display: block;
 }
 
+/* ==========================================================================
+   8. PINOS DO MAPA (Marcadores personalizados)
+   ========================================================================== */
 .custom-pin-wrapper { position: relative; width: 42px; height: 42px; display: flex; justify-content: center; align-items: flex-start; cursor: pointer; }
+
 .custom-pin {
   position: relative; width: 28px; height: 28px; border-radius: 50%;
   background: #5046e5; color: white; display: flex; align-items: center; justify-content: center;
@@ -166,50 +183,36 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #5046e5;
 }
 
-/* BALÃO COM FUNDO BRANCO, NÚMERO E CONTORNO NA COR #c20034 */
+/* Balão contendo o número de pacotes na parada */
 .pkg-badge {
   position: absolute; top: -4px; right: -10px; width: 16px; height: 16px; border-radius: 50%;
   background: #ffffff; color: #c20034; font-size: 11px; font-weight: 900;
   display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid #ff5500; z-index: 10;
 }
 
+/* Estados dinâmicos dos pinos */
 .custom-pin.active { width: 32px; height: 32px; font-size: 12px; background: #ff5500; color: #ffffff; z-index: 999; }
 .custom-pin.active::after { border-top-color: #ff5500; }
 .custom-pin.done { background: #10b981; color: white; }
 .custom-pin.done::after { border-top-color: #10b981; }
 .custom-pin.failed { background: #ef4444; color: white; }
 .custom-pin.failed::after { border-top-color: #ef4444; }
-
-/* Cor diferenciada para paradas sem coordenadas reais */
 .custom-pin.no-coords { background: #c207cb; color: white; }
 .custom-pin.no-coords::after { border-top-color: #c207cb; }
 
-/* Balão vermelho compacto de alerta "VALIDAR ENDEREÇO" */
+/* Badge de Alerta para Endereço sem Coordenadas Reais */
 .validate-address-badge {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #dc2626;
-  color: #ffffff;
-  font-size: 8px;
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 4px;
-  white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  border: 1px solid #ffffff;
-  z-index: 20;
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+  background: #dc2626; color: #ffffff; font-size: 8px; font-weight: 700;
+  padding: 1px 4px; border-radius: 4px; white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2); border: 1px solid #ffffff; z-index: 20;
+  text-transform: uppercase; display: flex; align-items: center; gap: 2px;
 }
-.validate-address-badge i {
-  font-size: 7px;
-}
+.validate-address-badge i { font-size: 7px; }
 
-
+/* ==========================================================================
+   9. MARCADOR DE GPS (Localização em Tempo Real)
+   ========================================================================== */
 .gps-pin-container { background: transparent; border: none; cursor: pointer; }
 .gps-marker-ring {
   width: 32px; height: 32px; border-radius: 50%;
@@ -219,6 +222,7 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #f3f4f6; }
   animation: pulse-ring 2s infinite;
 }
 .gps-marker-inner { width: 12px; height: 12px; background: #ffffff; border: 3px solid #e11d48; border-radius: 50%; }
+
 @keyframes pulse-ring {
   0% { transform: scale(0.95); opacity: 0.8; }
   50% { transform: scale(1.15); opacity: 1; }
