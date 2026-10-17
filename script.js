@@ -378,12 +378,10 @@ function renderStops(fitMapBounds = false) {
       const isActive = index === currentIndex;
       let statusClass = '';
       
-      // Define a cor roxa se não houver coordenadas reais
       if (item.hasRealCoords === false) {
         statusClass = 'no-coords';
       }
       
-      // Status de entrega tem prioridade máxima sobre a cor de alerta de coordenadas
       if (item.status === 'delivered') statusClass = 'done';
       if (item.status === 'failed') statusClass = 'failed';
       
@@ -653,8 +651,8 @@ function renderList() {
     const numA = parseInt(String(a.originalStop).replace(/[^0-9]/g, '')) || 0;
     const numB = parseInt(String(b.originalStop).replace(/[^0-9]/g, '')) || 0;
 
-    if (isPlusA && !isPlusB) return -1;
-    if (!isPlusA && isPlusB) return 1;
+    if (isPlusA && !isPlusB) return 1;
+    if (!isPlusA && isPlusB) return -1;
 
     return numA - numB;
   });
@@ -828,6 +826,10 @@ function handleFileUpload(event) {
         if (!existing.stopsList.includes(rawStop)) {
           existing.stopsList.push(rawStop);
           existing.stopsList.sort((a, b) => {
+            const isPlusA = String(a).trim().startsWith('+');
+            const isPlusB = String(b).trim().startsWith('+');
+            if (!isPlusA && isPlusB) return -1;
+            if (isPlusA && !isPlusB) return 1;
             const numA = parseInt(String(a).replace(/[^0-9]/g, '')) || 0;
             const numB = parseInt(String(b).replace(/[^0-9]/g, '')) || 0;
             return numA - numB;
@@ -839,6 +841,15 @@ function handleFileUpload(event) {
         }
         if (hasRealCoords) {
           existing.hasRealCoords = true;
+        }
+
+        // Prioriza e mantém a geolocalização da linha que possui número de parada (isNumbered)
+        if (isNumbered && isValidCoords) {
+          if (!existing.hasNumberedCoords) {
+            existing.lat = lat;
+            existing.lng = lng;
+            existing.hasNumberedCoords = true;
+          }
         }
       } else {
         stopsMap.set(key, {
@@ -856,7 +867,8 @@ function handleFileUpload(event) {
           lat: lat, 
           lng: lng, 
           status: 'pending',
-          hasRealCoords: hasRealCoords
+          hasRealCoords: hasRealCoords,
+          hasNumberedCoords: isNumbered && isValidCoords
         });
       }
     });

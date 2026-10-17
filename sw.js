@@ -1,7 +1,7 @@
 /* ==========================================================================
    CONFIGURAÇÃO DO SERVICE WORKER (Cache e Ciclo de Vida PWA)
    ========================================================================== */
-const CACHE_VERSION = 'v1.5.38'; // Atualize este valor ao modificar arquivos importantes para forçar atualização no cliente
+const CACHE_VERSION = 'v1.6.50'; // Atualize este valor ao modificar arquivos importantes para forçar atualização no cliente
 
 // Evento de instalação: pula a espera e ativa imediatamente
 self.addEventListener('install', (event) => {
