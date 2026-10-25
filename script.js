@@ -434,7 +434,7 @@ function selectStop(index) {
   saveDataToStorage();
   const stop = stopsData[currentIndex];
   if (stop && !isNaN(stop.lat) && map && isMapCanvasHealthy()) {
-    map.flyTo({ center: [stop.lng, stop.lat], zoom: 16 });
+    map.flyTo({ center: [stop.lng, stop.lat], zoom: 16.5 });
   }
   renderStops(false);
 }
