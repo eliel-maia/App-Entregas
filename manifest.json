@@ -1,16 +1,16 @@
 {
-  "name": "Mercado Compare",
-  "short_name": "MercadoCompare",
+  "name": "Entregas",
+  "short_name": "Entregas",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#5856d6",
+  "background_color": "#f3f4f6",
+  "theme_color": "#5046e5",
   "icons": [
     {
-      "src": "https://api.iconify.design/lucide:shopping-cart.svg?color=%235856d6",
+      "src": "./icone.png", 
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
